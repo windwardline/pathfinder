@@ -1,0 +1,84 @@
+name: Governed change proposal
+description: Propose a bounded documentation, product, architecture, engineering, research, security, or operational change.
+title: "change: "
+labels:
+  - triage
+  - change-proposal
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Documentation clarifications require review. User-visible behavior changes require an approved Product Decision. Architectural changes require an ADR. A proposal does not authorize implementation.
+
+  - type: dropdown
+    id: change_type
+    attributes:
+      label: Change classification
+      options:
+        - Documentation clarification
+        - Product change requiring a Product Decision
+        - Architecture change requiring an ADR
+        - Engineering implementation
+        - Research or validation
+        - Security or privacy control
+        - Operational change
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or inconsistency
+      description: Describe the evidence-backed problem without redesigning adjacent scope.
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Proposed outcome
+      description: State the bounded result, not an implementation wish list.
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: Identify what this proposal will not change.
+    validations:
+      required: true
+
+  - type: textarea
+    id: authority
+    attributes:
+      label: Governing sources and decision authority
+      description: Link affected canonical documents and any required Product Decision or ADR.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance evidence
+      description: Define the tests, documentation, demonstrations, or review evidence required to close the change.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: Invariant review
+      options:
+        - label: The Route remains the primary product artifact.
+          required: true
+        - label: The Route Engine remains the sole sequencing authority.
+          required: true
+        - label: Proposed Facts retain zero routing effect until confirmation.
+          required: true
+        - label: Provenance and user ownership remain intact.
+          required: true
+        - label: The Dependency Graph remains infrastructure.
+          required: true
+        - label: The proposal remains within Release 1 or identifies the required governance approval.
+          required: true

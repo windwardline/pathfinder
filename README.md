@@ -1,0 +1,69 @@
+# Pathfinder
+
+Pathfinder builds and continuously updates a user's Reentry Route. It shows what comes next, why it comes next, and what it unlocks.
+
+## Repository Status
+
+- Product baseline: Version 2 Design Freeze
+- Implementation scope: Release 1
+- Current phase: Repository Foundation
+- Canonical source: Markdown documentation in [`docs/`](docs/)
+
+Instructor publications are derived artifacts. They do not supersede the canonical Markdown corpus.
+
+## Product and Architecture Invariants
+
+Pathfinder follows this canonical authority flow:
+
+```text
+Confirmed Facts → Dependency Graph → Route Engine → Route → Adaptive Route View
+```
+
+- The Route is the primary product artifact.
+- Reroute is the governed response to confirmed change.
+- The Route Engine is the sole sequencing authority.
+- The Dependency Graph is infrastructure.
+- Only Confirmed Facts may affect routing.
+- Proposed Facts have no routing effect until explicitly confirmed.
+- Provenance is required for route-affecting Facts.
+- AI may interpret, extract, summarize, and explain; it may not sequence or prioritize Actions.
+
+## Start Here
+
+Read these documents before implementation:
+
+1. [Documentation Constitution](docs/00-governance/documentation-constitution.md)
+2. [Documentation Index](docs/00-governance/documentation-index.md)
+3. [Vision Lock](docs/00-governance/vision-lock.md)
+4. [Glossary](docs/00-governance/glossary.md)
+5. [Product Principles](docs/00-governance/product-principles.md)
+6. [Release 1](docs/01-product/release-1.md)
+7. [System Overview](docs/02-architecture/system-overview.md)
+8. [Architecture Decision Records](docs/05-decisions/)
+9. [Definition of Done](docs/06-development/definition-of-done.md)
+10. [Implementation Roadmap](docs/11-implementation/implementation-roadmap.md)
+11. [Implementation Phases](docs/11-implementation/implementation-phases.md)
+
+## Repository Layout
+
+```text
+docs/            Canonical product and engineering documentation
+apps/            User-facing applications; no routing authority
+services/        Backend business capabilities and Route Engine ownership
+packages/        Shared domain models, validation, types, and utilities
+tests/           Unit, integration, regression, fixture, adversarial, and performance tests
+scripts/         Developer automation without business logic
+infrastructure/  Deployment and environment automation
+tools/           Internal engineering utilities
+.github/         Repository automation and contribution support
+```
+
+## Contribution Governance
+
+Documentation leads implementation. Product changes require an approved Product Decision, architectural changes require an ADR, and all contributions must preserve protected terminology and the Version 2 Design Freeze.
+
+See the canonical [Contributing Guide](docs/06-development/contributing.md) and [Repository Governance](docs/00-governance/repository-governance.md).
+
+## License
+
+Copyright © 2026 Michael Lynn Peacock. All rights reserved. Pathfinder is proprietary; no permission to use, copy, modify, or distribute the repository is granted without prior written permission. See [LICENSE](LICENSE).

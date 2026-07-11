@@ -1,0 +1,18 @@
+# Default repository owner
+* @windwardline
+
+# Canonical documentation and decisions
+/docs/ @windwardline
+
+# Repository governance and automation
+/.github/ @windwardline
+/README.md @windwardline
+/CONTRIBUTING.md @windwardline
+/SECURITY.md @windwardline
+
+# Implementation and test boundaries
+/apps/ @windwardline
+/services/ @windwardline
+/packages/ @windwardline
+/tests/ @windwardline
+/infrastructure/ @windwardline
