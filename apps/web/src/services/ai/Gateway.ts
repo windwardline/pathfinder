@@ -1,11 +1,17 @@
 import Groq from 'groq-sdk';
 
-const groq = new Groq();
+let _groq: Groq | null = null;
+const getGroq = () => {
+  if (!_groq) {
+    _groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '' }); // Will error if empty at runtime instead of build time
+  }
+  return _groq;
+};
 
 export class AIGateway {
   static async extractCandidateFacts(text: string) {
     try {
-      const response = await groq.chat.completions.create({
+      const response = await getGroq().chat.completions.create({
         messages: [
           {
             role: "system",
@@ -31,7 +37,7 @@ export class AIGateway {
 
   static async generateExplanation(routeDiff: any) {
     try {
-      const response = await groq.chat.completions.create({
+      const response = await getGroq().chat.completions.create({
         messages: [
           {
             role: "user",
