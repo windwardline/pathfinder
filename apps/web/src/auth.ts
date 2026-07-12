@@ -12,6 +12,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   }),
   providers: [
     Resend({
+      name: "Email Magic Link",
       from: "pathfinder@windwardline.com", // Adjust domain to your verified Resend domain
     }),
   ],
