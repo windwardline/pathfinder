@@ -29,6 +29,9 @@ importers:
       '@pathfinder/core':
         specifier: workspace:*
         version: link:../../packages/core
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(postgres@3.4.9)
       groq-sdk:
         specifier: ^1.3.0
         version: 1.3.0
