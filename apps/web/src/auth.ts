@@ -13,6 +13,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Resend({
       name: "Email Magic Link",
+      apiKey: process.env.RESEND_API_KEY,
       from: "pathfinder@windwardline.com", // Adjust domain to your verified Resend domain
     }),
   ],
