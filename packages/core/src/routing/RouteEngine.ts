@@ -47,6 +47,14 @@ export class RouteEngine {
       if (action.status === 'COMPLETED') {
         status = RouteStepStatus.COMPLETED;
         reason = 'ALREADY_COMPLETED';
+        
+        const children = adj[currentId] || [];
+        for (const child of children) {
+          inDegree[child]--;
+          if (inDegree[child] === 0) {
+            availableQueue.push(child);
+          }
+        }
       } else if (!focusActionId) {
         // First uncompleted valid action is focus
         status = RouteStepStatus.FOCUS;
@@ -60,14 +68,6 @@ export class RouteEngine {
         reasonCode: reason,
         rank: rank++
       });
-
-      const children = adj[currentId] || [];
-      for (const child of children) {
-        inDegree[child]--;
-        if (inDegree[child] === 0) {
-          availableQueue.push(child);
-        }
-      }
     }
 
     // Any nodes left with inDegree > 0 are hard blocked by cycles or incomplete parents 

@@ -11,3 +11,5 @@ export * from './routing/RouteVersion';
 export * from './routing/RouteEngine';
 
 export * from './history/RouteHistory';
+export * from './db/schema';
+export * from './db/client';
