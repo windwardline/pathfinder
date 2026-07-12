@@ -75,3 +75,5 @@ artifacts/
 *.tar
 *.tar.gz
 *.tgz
+.vercel
+.env*
