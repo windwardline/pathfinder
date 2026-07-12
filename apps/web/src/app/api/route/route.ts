@@ -19,8 +19,9 @@ export async function GET() {
     const domainFacts: Fact[] = userFacts.map(f => ({
       id: f.id,
       payload: JSON.parse(f.factText),
-      status: f.status as 'Confirmed' | 'Proposed' | 'Superseded',
-      version: f.version
+      status: f.status as any,
+      createdAt: f.createdAt,
+      updatedAt: f.updatedAt
     }));
 
     // 2. Build immutable Graph Version
@@ -45,7 +46,7 @@ export async function GET() {
       id: snapshotId,
       userId: userId,
       graphVersionId: graphId,
-      focusActionId: route[0]?.actionId || null,
+      focusActionId: route.steps[0]?.actionId || null,
     });
 
     return NextResponse.json({ success: true, route });
