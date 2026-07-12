@@ -23,7 +23,6 @@ export async function POST(request: Request) {
         userId: userId,
         factText: JSON.stringify(fact.payload),
         status: fact.status,
-        version: fact.version,
       }).returning();
 
       if (provPayload) {
