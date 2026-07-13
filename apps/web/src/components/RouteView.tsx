@@ -4,6 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Loader2, CheckCircle2, Lock, ArrowRight, BrainCircuit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+interface RouteStep {
+  actionId: string;
+  status: string;
+  rank: number;
+  reasonCode: string;
+}
+
 export function RouteView() {
   const [route, setRoute] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,8 +90,8 @@ export function RouteView() {
     );
   }
 
-  const focusSteps = (route?.steps as Record<string, unknown>[])?.filter((s) => s.status === 'FOCUS') || [];
-  const otherSteps = (route?.steps as Record<string, unknown>[])?.filter((s) => s.status !== 'FOCUS' && s.status !== 'COMPLETED') || [];
+  const focusSteps = (route?.steps as RouteStep[])?.filter((s) => s.status === 'FOCUS') || [];
+  const otherSteps = (route?.steps as RouteStep[])?.filter((s) => s.status !== 'FOCUS' && s.status !== 'COMPLETED') || [];
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 items-start">
