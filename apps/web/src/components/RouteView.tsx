@@ -5,7 +5,7 @@ import { Sparkles, Loader2, CheckCircle2, Lock, ArrowRight, BrainCircuit } from 
 import { cn } from '@/lib/utils';
 
 export function RouteView() {
-  const [route, setRoute] = useState<any>(null);
+  const [route, setRoute] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [inputText, setInputText] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -26,6 +26,7 @@ export function RouteView() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line
     fetchRoute();
   }, []);
 
@@ -82,8 +83,8 @@ export function RouteView() {
     );
   }
 
-  const focusSteps = route?.steps?.filter((s: any) => s.status === 'FOCUS') || [];
-  const otherSteps = route?.steps?.filter((s: any) => s.status !== 'FOCUS' && s.status !== 'COMPLETED') || [];
+  const focusSteps = (route?.steps as Record<string, unknown>[])?.filter((s) => s.status === 'FOCUS') || [];
+  const otherSteps = (route?.steps as Record<string, unknown>[])?.filter((s) => s.status !== 'FOCUS' && s.status !== 'COMPLETED') || [];
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 items-start">
@@ -142,11 +143,11 @@ export function RouteView() {
               className="p-8 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl flex flex-col items-center justify-center text-center text-zinc-500 min-h-[200px]"
             >
               <CheckCircle2 className="w-12 h-12 mb-4 text-zinc-300 dark:text-zinc-700" />
-              <p>No active steps. You're fully caught up.</p>
+              <p>No active steps. You&apos;re fully caught up.</p>
               <p className="text-sm mt-1">Ingest new information to generate routes.</p>
             </motion.div>
           ) : (
-            focusSteps.map((step: any) => (
+            focusSteps.map((step) => (
               <motion.div 
                 layoutId={step.actionId}
                 key={step.actionId}
@@ -209,7 +210,7 @@ export function RouteView() {
               <div className="absolute left-0 top-6 bottom-6 w-px bg-gradient-to-b from-zinc-300 via-zinc-200 to-transparent dark:from-zinc-700 dark:via-zinc-800 dark:to-transparent" />
               
               <div className="space-y-6">
-                {otherSteps.map((step: any, idx: number) => {
+                {otherSteps.map((step) => {
                   const isBlocked = step.status === 'BLOCKED';
                   return (
                     <motion.div 

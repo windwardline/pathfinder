@@ -29,7 +29,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             )
           )
         return result[0] ?? null
-      } catch (err) {
+      } catch {
         throw new Error("No verification token found.")
       }
     },

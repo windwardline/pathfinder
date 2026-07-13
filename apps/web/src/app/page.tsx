@@ -1,9 +1,8 @@
 import { RouteView } from '../components/RouteView';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { LogOut, Navigation, Settings, LayoutDashboard } from 'lucide-react';
+import { Navigation, Settings, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
-import { signOut } from '@/auth'; // Optional: if you use server actions for sign out, else client component
 
 export default async function Home() {
   const session = await auth();
@@ -56,7 +55,7 @@ export default async function Home() {
           <header className="mb-12 flex justify-between items-end pb-8">
             <div>
               <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                Today's Route
+                Today&apos;s Route
               </h1>
               <p className="mt-2 text-lg text-zinc-600 dark:text-zinc-400 max-w-xl leading-relaxed">
                 Your deterministic sequence. Ingest information to watch the engine chart your optimal path.

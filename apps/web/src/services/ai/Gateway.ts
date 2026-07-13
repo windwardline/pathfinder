@@ -35,7 +35,7 @@ export class AIGateway {
     }
   }
 
-  static async generateExplanation(routeDiff: any) {
+  static async generateExplanation(routeDiff: unknown) {
     try {
       const response = await getGroq().chat.completions.create({
         messages: [
@@ -47,7 +47,7 @@ export class AIGateway {
         model: "llama3-8b-8192",
       });
       return response.choices[0]?.message?.content || "No explanation could be generated.";
-    } catch (e) {
+    } catch {
       return "Explanation generation failed.";
     }
   }

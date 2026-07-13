@@ -19,6 +19,7 @@ export async function GET() {
     const domainFacts: Fact[] = userFacts.map(f => ({
       id: f.id,
       payload: JSON.parse(f.factText),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       status: f.status as any,
       createdAt: f.createdAt,
       updatedAt: f.updatedAt
@@ -32,6 +33,7 @@ export async function GET() {
       id: graphId,
       userId: userId,
       sequenceNumber: 1, // simplified sequence increment
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       snapshotData: domainFacts as any, // Drizzle JSON fields map to arrays/objects directly sometimes, or stringify
     });
 
@@ -50,7 +52,7 @@ export async function GET() {
     });
 
     return NextResponse.json({ success: true, route });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

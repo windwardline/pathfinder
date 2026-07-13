@@ -61,8 +61,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
 
@@ -76,7 +76,7 @@ export async function GET() {
 
     const allFacts = await db.select().from(facts).where(eq(facts.userId, userId));
     return NextResponse.json({ facts: allFacts });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

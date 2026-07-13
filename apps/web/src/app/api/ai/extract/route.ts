@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
     const facts = await AIGateway.extractCandidateFacts(text);
     return NextResponse.json({ success: true, facts });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
