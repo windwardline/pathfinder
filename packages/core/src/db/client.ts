@@ -4,13 +4,16 @@ import * as schema from "./schema"
 
 const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL
 
-if (!connectionString && process.env.NODE_ENV === "production") {
+// Fail closed: the localhost fallback exists only for explicit local development/test.
+const isLocalEnv =
+  process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test"
+
+if (!connectionString && !isLocalEnv) {
   throw new Error(
-    "POSTGRES_URL or DATABASE_URL must be set in production. Refusing to fall back to default credentials."
+    "POSTGRES_URL or DATABASE_URL must be set. Refusing to fall back to default credentials outside local development."
   )
 }
 
-// Local development fallback only; production fails fast above.
 const resolvedConnectionString =
   connectionString || "postgres://postgres:postgres@localhost:5432/pathfinder"
 

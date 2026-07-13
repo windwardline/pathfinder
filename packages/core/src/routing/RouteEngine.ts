@@ -1,87 +1,189 @@
 import { RoutingSnapshot } from './RoutingSnapshot';
-import { RouteVersion, RouteStep, RouteStepStatus } from './RouteVersion';
+import { RouteVersion, RouteStep, RouteStepStatus, RouteStatus } from './RouteVersion';
 import { Action } from '../graph/types';
+import { normalizeOrderingEdges } from '../graph/edges';
 
+/**
+ * The Route Engine is the sole sequencing authority (ADR-002).
+ * Identical Routing Snapshots must always produce identical Routes.
+ *
+ * Sequencing rules:
+ * 1. Completed Actions are contracted out of the graph first, so ordering and
+ *    Focus selection depend only on the remaining actionable work — never on
+ *    the ids or titles of Actions that are already done.
+ * 2. The remaining DAG is ordered with Kahn's algorithm using a stable
+ *    (title, actionId) lexicographic tie-break, which yields a deterministic
+ *    total order that respects dependency layers.
+ * 3. The Focus Action is the first currently-available Action in that order.
+ * 4. Completed Actions are appended last, in stable order, for Route History.
+ */
 export class RouteEngine {
-  /**
-   * Deterministically sequence actions based on dependencies and lexicographic tie-breaking.
-   */
   static generateRoute(snapshot: RoutingSnapshot): RouteVersion {
     const { graph } = snapshot;
     const actions = graph.nodes.filter(n => n.type === 'ACTION') as Action[];
-    const dependencies = graph.dependencies;
 
-    const inDegree: Record<string, number> = {};
-    const adj: Record<string, string[]> = {};
-
-    for (const a of actions) {
-      inDegree[a.id] = 0;
-      adj[a.id] = [];
+    if (actions.length === 0) {
+      return new RouteVersion(
+        `rt_${snapshot.id}`,
+        snapshot.id,
+        [],
+        undefined,
+        RouteStatus.EMPTY
+      );
     }
 
-    // Build graph for topological sort (only considering Action -> Action blocks for now)
-    for (const dep of dependencies) {
-      if (dep.type === 'BLOCKS' && inDegree[dep.targetId] !== undefined) {
-        adj[dep.sourceId] = adj[dep.sourceId] || [];
-        adj[dep.sourceId].push(dep.targetId);
-        inDegree[dep.targetId]++;
+    const byId = new Map(actions.map(a => [a.id, a]));
+    const actionIds = new Set(actions.map(a => a.id));
+    const edges = normalizeOrderingEdges(actionIds, graph.dependencies);
+
+    const isCompleted = (id: string) => byId.get(id)!.status === 'COMPLETED';
+    const compare = (a: string, b: string) => {
+      const ta = byId.get(a)!.title;
+      const tb = byId.get(b)!.title;
+      return ta.localeCompare(tb) || a.localeCompare(b);
+    };
+
+    // Direct relations over ALL actions (used for unlocks/blockedBy display).
+    const childrenOf = new Map<string, string[]>();
+    const parentsOf = new Map<string, string[]>();
+    for (const e of edges) {
+      childrenOf.set(e.fromId, [...(childrenOf.get(e.fromId) || []), e.toId]);
+      parentsOf.set(e.toId, [...(parentsOf.get(e.toId) || []), e.fromId]);
+    }
+
+    // Contracted graph: incomplete actions only; edges from completed sources
+    // are satisfied and edges into completed targets are irrelevant.
+    const openIds = actions.filter(a => !isCompleted(a.id)).map(a => a.id);
+    const inDegree = new Map<string, number>(openIds.map(id => [id, 0]));
+    const openChildren = new Map<string, string[]>();
+    for (const e of edges) {
+      if (!isCompleted(e.fromId) && !isCompleted(e.toId)) {
+        inDegree.set(e.toId, (inDegree.get(e.toId) || 0) + 1);
+        openChildren.set(e.fromId, [...(openChildren.get(e.fromId) || []), e.toId]);
       }
     }
+
+    const initiallyAvailable = new Set(openIds.filter(id => inDegree.get(id) === 0));
+
+    // Deterministic total order over incomplete actions (Kahn + stable tie-break).
+    const queue = [...initiallyAvailable];
+    const order: string[] = [];
+    const remaining = new Map(inDegree);
+    while (queue.length > 0) {
+      queue.sort(compare);
+      const current = queue.shift()!;
+      order.push(current);
+      for (const child of openChildren.get(current) || []) {
+        const d = remaining.get(child)! - 1;
+        remaining.set(child, d);
+        if (d === 0) queue.push(child);
+      }
+    }
+
+    const focusActionId = order.find(id => initiallyAvailable.has(id));
+
+    const openUnlocks = (id: string) =>
+      (childrenOf.get(id) || [])
+        .filter(childId => !isCompleted(childId))
+        .sort(compare)
+        .map(childId => byId.get(childId)!.title);
+
+    const openBlockers = (id: string) =>
+      (parentsOf.get(id) || [])
+        .filter(parentId => !isCompleted(parentId))
+        .sort(compare)
+        .map(parentId => byId.get(parentId)!.title);
 
     const steps: RouteStep[] = [];
     let rank = 1;
-    let focusActionId: string | undefined = undefined;
 
-    // We process available nodes. To ensure determinism (ADR-002), we sort the queue lexicographically.
-    const availableQueue: string[] = Object.keys(inDegree).filter(id => inDegree[id] === 0);
+    for (const id of order) {
+      const action = byId.get(id)!;
+      const available = initiallyAvailable.has(id);
+      const unlocks = openUnlocks(id);
+      const blockedBy = openBlockers(id);
 
-    while (availableQueue.length > 0) {
-      availableQueue.sort((a, b) => a.localeCompare(b)); // Lexicographic tie-breaker
-      
-      const currentId = availableQueue.shift()!;
-      const action = actions.find(a => a.id === currentId)!;
-      
-      let status = RouteStepStatus.PENDING;
-      let reason = 'DEFAULT_RANKING';
+      let status: RouteStepStatus;
+      const reasonCodes: string[] = [];
+      let explanation: string;
 
-      if (action.status === 'COMPLETED') {
-        status = RouteStepStatus.COMPLETED;
-        reason = 'ALREADY_COMPLETED';
-        
-        const children = adj[currentId] || [];
-        for (const child of children) {
-          inDegree[child]--;
-          if (inDegree[child] === 0) {
-            availableQueue.push(child);
-          }
+      if (available) {
+        status = id === focusActionId ? RouteStepStatus.FOCUS : RouteStepStatus.UPCOMING;
+        if (unlocks.length >= 1) reasonCodes.push('HARD_PREREQUISITE');
+        if (unlocks.length >= 2) reasonCodes.push('HIGH_UNLOCK_VALUE');
+        if (initiallyAvailable.size === 1) {
+          reasonCodes.push('ONLY_ELIGIBLE_ACTION');
+        } else {
+          reasonCodes.push('STABLE_TIE_BREAK');
         }
-      } else if (!focusActionId) {
-        // First uncompleted valid action is focus
-        status = RouteStepStatus.FOCUS;
-        reason = 'LEXICOGRAPHIC_FOCUS';
-        focusActionId = currentId;
+
+        if (unlocks.length >= 1) {
+          explanation = `This comes next because it is required before you can complete ${unlocks[0]}.`;
+        } else if (initiallyAvailable.size === 1) {
+          explanation = 'This comes next because it is the only Action currently available.';
+        } else {
+          explanation =
+            'This comes next based on the deterministic order of your available Actions.';
+        }
+      } else {
+        status = RouteStepStatus.BLOCKED;
+        reasonCodes.push('BLOCKED_BY_DEPENDENCY');
+        explanation = `This Action becomes available after you complete ${formatList(blockedBy)}.`;
       }
 
       steps.push({
-        actionId: currentId,
+        actionId: id,
+        title: action.title,
+        description: action.description ?? '',
         status,
-        reasonCode: reason,
-        rank: rank++
+        reasonCodes,
+        explanation,
+        rank: rank++,
+        unlocks,
+        blockedBy,
       });
     }
 
-    // Any nodes left with inDegree > 0 are hard blocked by cycles or incomplete parents 
-    for (const id of Object.keys(inDegree)) {
-      if (inDegree[id] > 0) {
-        steps.push({
-          actionId: id,
-          status: RouteStepStatus.BLOCKED,
-          reasonCode: 'BLOCKED_BY_DEPENDENCY',
-          rank: rank++
-        });
-      }
+    // Completed actions come last, in stable order, so history stays visible
+    // without influencing the actionable sequence.
+    const completedIds = actions
+      .filter(a => isCompleted(a.id))
+      .map(a => a.id)
+      .sort(compare);
+    for (const id of completedIds) {
+      const action = byId.get(id)!;
+      steps.push({
+        actionId: id,
+        title: action.title,
+        description: action.description ?? '',
+        status: RouteStepStatus.COMPLETED,
+        reasonCodes: ['ALREADY_COMPLETED'],
+        explanation: 'You have completed this Action.',
+        rank: rank++,
+        unlocks: openUnlocks(id),
+        blockedBy: [],
+      });
     }
 
-    return new RouteVersion(`rt_${Date.now()}`, snapshot.id, steps, focusActionId);
+    const status: RouteStatus =
+      openIds.length === 0
+        ? RouteStatus.COMPLETED
+        : focusActionId
+          ? RouteStatus.ACTIVE
+          : RouteStatus.BLOCKED;
+
+    return new RouteVersion(
+      `rt_${snapshot.id}`,
+      snapshot.id,
+      steps,
+      focusActionId,
+      status
+    );
   }
+}
+
+function formatList(items: string[]): string {
+  if (items.length === 0) return 'its prerequisites';
+  if (items.length === 1) return items[0];
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 }

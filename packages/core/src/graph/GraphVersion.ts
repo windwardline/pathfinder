@@ -1,6 +1,7 @@
 import { Fact, FactStatus } from '../domain/Fact';
 import { Action, GraphNode, Dependency } from './types';
 import { CycleDetector } from './CycleDetector';
+import { normalizeOrderingEdges } from './edges';
 
 export class GraphVersionError extends Error {
   constructor(message: string) {
@@ -33,8 +34,16 @@ export class GraphVersion {
 
     this.deriveFromFacts(facts);
 
-    // 3. Detect Cycles deterministically
-    if (CycleDetector.hasCycle(this.dependencies)) {
+    // 3. Detect cycles deterministically, over ordering edges only.
+    // Non-ordering relationship types must not make a valid routing graph
+    // unbuildable, and dangling references are ignored rather than fatal.
+    const actionIds = new Set(
+      this.nodes.filter(n => n.type === 'ACTION').map(n => n.id)
+    );
+    const orderingEdges = normalizeOrderingEdges(actionIds, this.dependencies).map(
+      e => ({ sourceId: e.fromId, targetId: e.toId, type: 'BLOCKS' as const })
+    );
+    if (CycleDetector.hasCycle(orderingEdges)) {
       throw new GraphVersionError('Dependency graph contains a hard cycle.');
     }
   }
