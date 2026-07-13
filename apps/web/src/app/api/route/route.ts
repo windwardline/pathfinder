@@ -1,58 +1,57 @@
 import { NextResponse } from 'next/server';
-import { RouteEngine, RoutingSnapshot, GraphVersion, Fact } from '@pathfinder/core';
-import { db, facts, graphVersions, routingSnapshots } from '@pathfinder/core';
-import { eq, and } from 'drizzle-orm';
+import { FactStatus, GraphVersionError } from '@pathfinder/core';
 import { auth } from '@/auth';
+import { loadFactRows, toDomainFact, buildRoute } from '@/lib/route-service';
 
+/**
+ * Returns the current Route computed from the user's Confirmed Facts.
+ * Route generation is pure: reads never write. Snapshots and Reroute
+ * Events are persisted by the mutations that change Confirmed Facts.
+ */
 export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const userId = session.user.id;
 
-    // 1. Fetch user's confirmed facts
-    const userFacts = await db.select().from(facts).where(and(eq(facts.userId, userId), eq(facts.status, 'Confirmed')));
+    const rows = await loadFactRows(session.user.id);
+    const confirmed = rows
+      .filter(r => r.status === FactStatus.Confirmed)
+      .map(toDomainFact)
+      .filter(f => f !== null);
+    const proposedCount = rows.filter(r => r.status === FactStatus.Proposed).length;
 
-    // Transform DB facts back to domain Fact objects
-    const domainFacts: Fact[] = userFacts.map(f => ({
-      id: f.id,
-      payload: JSON.parse(f.factText),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      status: f.status as any,
-      createdAt: f.createdAt,
-      updatedAt: f.updatedAt
-    }));
+    const route = buildRoute(confirmed);
 
-    // 2. Build immutable Graph Version
-    const graphId = crypto.randomUUID();
-    const graph = new GraphVersion(graphId, domainFacts);
-    
-    await db.insert(graphVersions).values({
-      id: graphId,
-      userId: userId,
-      sequenceNumber: 1, // simplified sequence increment
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      snapshotData: domainFacts as any, // Drizzle JSON fields map to arrays/objects directly sometimes, or stringify
+    return NextResponse.json({
+      success: true,
+      route: {
+        id: route.id,
+        status: route.status,
+        focusActionId: route.focusActionId ?? null,
+        steps: route.steps,
+        createdAt: route.createdAt,
+      },
+      proposedCount,
+      confirmedCount: confirmed.length,
     });
-
-    // 3. Build Snapshot
-    const snapshotId = crypto.randomUUID();
-    const snapshot = new RoutingSnapshot(snapshotId, graph, domainFacts);
-
-    // 4. Engine Sequencing
-    const route = RouteEngine.generateRoute(snapshot);
-
-    await db.insert(routingSnapshots).values({
-      id: snapshotId,
-      userId: userId,
-      graphVersionId: graphId,
-      focusActionId: route.steps[0]?.actionId || null,
-    });
-
-    return NextResponse.json({ success: true, route });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    if (error instanceof GraphVersionError) {
+      console.error('Route engine rejected the confirmed fact set:', error.message);
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Your Route could not be recalculated because the confirmed facts conflict. Your last valid Route is unchanged.',
+        },
+        { status: 422 }
+      );
+    }
+    console.error('GET /api/route failed:', error);
+    return NextResponse.json(
+      { success: false, error: 'The Route could not be loaded. Please try again.' },
+      { status: 500 }
+    );
   }
 }
