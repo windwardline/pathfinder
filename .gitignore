@@ -10,9 +10,9 @@ Thumbs.db
 
 # Environment variables and local configuration
 .env
-.env.*
-!.env.example
+.env*
 *.local
+!.env.example
 
 # Secrets and credentials
 *.pem
@@ -21,6 +21,8 @@ Thumbs.db
 *.pfx
 credentials.json
 secrets.json
+resend_key.txt
+*_key.txt
 
 # Logs and runtime output
 *.log
@@ -75,5 +77,7 @@ artifacts/
 *.tar
 *.tar.gz
 *.tgz
+
+# Tooling
 .vercel
-.env*
+.playwright-mcp/

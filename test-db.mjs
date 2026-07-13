@@ -1,1 +1,0 @@
-import { sql } from "@vercel/postgres"; async function test() { try { const result = await sql`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`; console.log(result.rows); } catch (e) { console.error(e); } } test();
