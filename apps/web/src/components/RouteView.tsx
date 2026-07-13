@@ -12,9 +12,7 @@ export function RouteView() {
       const res = await fetch('/api/route');
       const data = await res.json();
       if (data.route) {
-        setRoute({
-          steps: data.route
-        });
+        setRoute(data.route);
       }
     } catch (e) {
       console.error(e);
