@@ -3,10 +3,10 @@ import { RouteEngine, RoutingSnapshot, GraphVersion, Fact, FactStatus } from '..
 
 describe('RouteEngine - Golden Fixtures', () => {
   it('Fixture 1: Lexicographical Tie-Breaking (ADR-002)', () => {
-    const facts: Fact[] = [
-      { id: 'action_B', payload: { key: 'ACTION', value: { title: 'action_B', description: 'desc', status: 'OPEN' } }, status: FactStatus.Confirmed, version: 1 },
-      { id: 'action_A', payload: { key: 'ACTION', value: { title: 'action_A', description: 'desc', status: 'OPEN' } }, status: FactStatus.Confirmed, version: 1 }
-    ];
+    const facts = [
+      { id: 'action_B', payload: { key: 'ACTION', value: { title: 'action_B', description: 'desc', status: 'OPEN' } }, status: FactStatus.Confirmed },
+      { id: 'action_A', payload: { key: 'ACTION', value: { title: 'action_A', description: 'desc', status: 'OPEN' } }, status: FactStatus.Confirmed }
+    ] as Fact[];
     
     const graph = new GraphVersion('g1', facts);
     const snapshot = new RoutingSnapshot('s1', graph, facts);
@@ -19,11 +19,11 @@ describe('RouteEngine - Golden Fixtures', () => {
   });
 
   it('Fixture 2: Dependency Blocking', () => {
-    const facts: Fact[] = [
-      { id: 'action_C', payload: { key: 'ACTION', value: { title: 'action_C', description: 'desc', status: 'OPEN' } }, status: FactStatus.Confirmed, version: 1 },
-      { id: 'action_A', payload: { key: 'ACTION', value: { title: 'action_A', description: 'desc', status: 'OPEN' } }, status: FactStatus.Confirmed, version: 1 },
-      { id: 'dep1', payload: { key: 'DEPENDENCY', value: { sourceId: 'action_C', targetId: 'action_A', type: 'BLOCKS' } }, status: FactStatus.Confirmed, version: 1 }
-    ];
+    const facts = [
+      { id: 'action_C', payload: { key: 'ACTION', value: { title: 'action_C', description: 'desc', status: 'OPEN' } }, status: FactStatus.Confirmed },
+      { id: 'action_A', payload: { key: 'ACTION', value: { title: 'action_A', description: 'desc', status: 'OPEN' } }, status: FactStatus.Confirmed },
+      { id: 'dep1', payload: { key: 'DEPENDENCY', value: { sourceId: 'action_C', targetId: 'action_A', type: 'BLOCKS' } }, status: FactStatus.Confirmed }
+    ] as Fact[];
 
     const graph = new GraphVersion('g2', facts);
     const snapshot = new RoutingSnapshot('s2', graph, facts);
@@ -39,12 +39,12 @@ describe('RouteEngine - Golden Fixtures', () => {
   });
 
   it('Fixture 3: Hard Cycle Detection', () => {
-    const facts: Fact[] = [
-      { id: 'action_A', payload: { key: 'ACTION', value: { title: 'action_A', description: 'desc', status: 'OPEN' } }, status: FactStatus.Confirmed, version: 1 },
-      { id: 'action_B', payload: { key: 'ACTION', value: { title: 'action_B', description: 'desc', status: 'OPEN' } }, status: FactStatus.Confirmed, version: 1 },
-      { id: 'dep1', payload: { key: 'DEPENDENCY', value: { sourceId: 'action_A', targetId: 'action_B', type: 'BLOCKS' } }, status: FactStatus.Confirmed, version: 1 },
-      { id: 'dep2', payload: { key: 'DEPENDENCY', value: { sourceId: 'action_B', targetId: 'action_A', type: 'BLOCKS' } }, status: FactStatus.Confirmed, version: 1 }
-    ];
+    const facts = [
+      { id: 'action_A', payload: { key: 'ACTION', value: { title: 'action_A', description: 'desc', status: 'OPEN' } }, status: FactStatus.Confirmed },
+      { id: 'action_B', payload: { key: 'ACTION', value: { title: 'action_B', description: 'desc', status: 'OPEN' } }, status: FactStatus.Confirmed },
+      { id: 'dep1', payload: { key: 'DEPENDENCY', value: { sourceId: 'action_A', targetId: 'action_B', type: 'BLOCKS' } }, status: FactStatus.Confirmed },
+      { id: 'dep2', payload: { key: 'DEPENDENCY', value: { sourceId: 'action_B', targetId: 'action_A', type: 'BLOCKS' } }, status: FactStatus.Confirmed }
+    ] as Fact[];
 
     expect(() => {
       new GraphVersion('g3', facts);
