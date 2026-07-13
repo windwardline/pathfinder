@@ -1,54 +1,136 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Surfaces */
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-hairline: var(--hairline);
+
+  /* Ink */
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+
+  /* Wayfinding */
+  --color-spruce: var(--spruce);
+  --color-spruce-soft: var(--spruce-soft);
+  --color-spruce-ink: var(--spruce-ink);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-brick: var(--brick);
+  --color-brick-soft: var(--brick-soft);
+
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
 }
 
 :root {
-  --background: #f8fafc;
-  --foreground: #020617;
+  --paper: #fafaf7;
+  --surface: #ffffff;
+  --raised: #f2f2ec;
+  --hairline: #e3e3da;
+
+  --ink: #1c2321;
+  --ink-soft: #4d5854;
+  --ink-faint: #8a938f;
+
+  --spruce: #17594e;
+  --spruce-soft: #e3efec;
+  --spruce-ink: #0f3d36;
+  --amber: #b07d2e;
+  --amber-soft: #f6ecd9;
+  --brick: #a6432f;
+  --brick-soft: #f6e5e0;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #000000;
-    --foreground: #f8fafc;
+    --paper: #111815;
+    --surface: #17201c;
+    --raised: #1e2a25;
+    --hairline: #2b3833;
+
+    --ink: #e9efec;
+    --ink-soft: #a7b3ad;
+    --ink-faint: #6e7a74;
+
+    --spruce: #4ca893;
+    --spruce-soft: #1a2f29;
+    --spruce-ink: #7cc7b5;
+    --amber: #d3a256;
+    --amber-soft: #33291a;
+    --brick: #cf7460;
+    --brick-soft: #362019;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--paper);
+  color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom modern scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+::selection {
+  background: var(--spruce);
+  color: var(--paper);
 }
 
+/* Subtle scrollbar that matches the surface */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: rgba(150, 150, 150, 0.3);
+  background: var(--hairline);
+  border-radius: 5px;
+  border: 2px solid var(--paper);
+}
+
+/* Visible focus for keyboard navigation, everywhere. */
+:focus-visible {
+  outline: 2px solid var(--spruce);
+  outline-offset: 2px;
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(150, 150, 150, 0.5);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
-/* Smooth transitions globally for themes */
-* {
-  transition-property: background-color, border-color, color, fill, stroke;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+/* The route line: the drawn trail connecting Route steps. */
+.route-line {
+  background: linear-gradient(
+    to bottom,
+    var(--spruce) 0%,
+    var(--spruce) 55%,
+    var(--hairline) 100%
+  );
+}
+
+@keyframes you-are-here {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--spruce) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--spruce) 12%, transparent);
+  }
+}
+
+.focus-marker {
+  animation: you-are-here 2.4s ease-in-out infinite;
 }

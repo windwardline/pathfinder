@@ -1,16 +1,18 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
-import { TodayView } from '@/components/TodayView';
+import { RoutePageView } from '@/components/RoutePageView';
 
-export default async function TodayPage() {
+export const metadata = { title: 'Route' };
+
+export default async function RoutePage() {
   const session = await auth();
   if (!session?.user?.email) {
     redirect('/signin');
   }
   return (
-    <AppShell active="/" email={session.user.email}>
-      <TodayView />
+    <AppShell active="/route" email={session.user.email}>
+      <RoutePageView />
     </AppShell>
   );
 }
