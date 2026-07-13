@@ -61,8 +61,9 @@ describe('RouteEngine - Golden Fixtures', () => {
     expect(focus.unlocks).toEqual(
       expect.arrayContaining(['Complete employment onboarding', 'Submit the housing application'])
     );
+    // Canonical copy: a leading "Complete" in the downstream title is not doubled.
     expect(focus.explanation).toBe(
-      'This comes next because it is required before you can complete Complete employment onboarding.'
+      'This comes next because it is required before you can complete employment onboarding.'
     );
 
     const supervision = route.steps.find(s => s.actionId === 'f-supervision')!;

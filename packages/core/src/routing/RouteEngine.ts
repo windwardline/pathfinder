@@ -118,7 +118,7 @@ export class RouteEngine {
         }
 
         if (unlocks.length >= 1) {
-          explanation = `This comes next because it is required before you can complete ${unlocks[0]}.`;
+          explanation = `This comes next because it is required before you can complete ${asCompletable(unlocks[0])}.`;
         } else if (initiallyAvailable.size === 1) {
           explanation = 'This comes next because it is the only Action currently available.';
         } else {
@@ -186,4 +186,14 @@ function formatList(items: string[]): string {
   if (items.length === 0) return 'its prerequisites';
   if (items.length === 1) return items[0];
   return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+/**
+ * Titles are imperative ("Complete employment onboarding"), so inserting one
+ * after "before you can complete …" would double the verb. Matches the
+ * canonical explanation copy, which drops the leading verb.
+ */
+function asCompletable(title: string): string {
+  const match = title.match(/^complete\s+(.*)$/i);
+  return match ? match[1] : title;
 }

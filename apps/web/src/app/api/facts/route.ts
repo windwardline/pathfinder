@@ -105,6 +105,7 @@ export async function POST(request: Request) {
         RerouteReason.FACT_CONFIRMED,
         routeBefore,
         routeAfter,
+        factsBefore,
         factsAfter
       );
     } catch (e) {

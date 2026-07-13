@@ -44,6 +44,34 @@ Read these documents before implementation:
 10. [Implementation Roadmap](docs/11-implementation/implementation-roadmap.md)
 11. [Implementation Phases](docs/11-implementation/implementation-phases.md)
 
+## Local Development
+
+```bash
+pnpm install
+pnpm dev        # starts apps/web on http://localhost:3000
+pnpm typecheck  # tsc --noEmit across packages
+pnpm test       # deterministic Route Engine fixtures (packages/core)
+pnpm lint
+pnpm build
+```
+
+Required environment variables (set in `apps/web`'s environment or a root
+`.env.local`; production values live in Vercel project settings, never in
+the repository):
+
+| Variable | Purpose |
+|---|---|
+| `POSTGRES_URL` (or `DATABASE_URL`) | Postgres connection string |
+| `AUTH_SECRET` | NextAuth session encryption (`openssl rand -base64 32`) |
+| `RESEND_API_KEY` | Magic-link sign-in email delivery |
+| `AUTH_RESEND_FROM` | Verified sender address for sign-in email |
+| `GROQ_API_KEY` | AI fact extraction (optional — the app degrades gracefully) |
+| `GROQ_MODEL` | Optional model override (default `openai/gpt-oss-20b`) |
+
+Apply the database schema to a fresh database with
+`pnpm --filter @pathfinder/core db:push`. A signed-in user can load the
+seeded demonstration scenario (SD-001) from the empty state on Today.
+
 ## Repository Layout
 
 ```text

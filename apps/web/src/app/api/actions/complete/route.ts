@@ -83,6 +83,7 @@ export async function POST(request: Request) {
       RerouteReason.ACTION_COMPLETED,
       routeBefore,
       routeAfter,
+      factsBefore,
       factsAfter
     );
 

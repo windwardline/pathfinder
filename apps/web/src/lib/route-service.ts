@@ -75,7 +75,8 @@ export async function recordReroute(
   reason: RerouteReason,
   previousRoute: RouteVersion,
   newRoute: RouteVersion,
-  confirmedFacts: Fact[]
+  factsBefore: Fact[],
+  factsAfter: Fact[]
 ): Promise<RerouteRecord | null> {
   const difference = computeRouteDifference(previousRoute, newRoute);
   if (!difference.isMeaningful) {
@@ -91,19 +92,40 @@ export async function recordReroute(
       .select({ maxSeq: sql<number>`coalesce(max("sequenceNumber"), 0)` })
       .from(graphVersions)
       .where(eq(graphVersions.userId, userId));
+    let nextSeq = Number(maxSeq);
 
-    const [latestSnapshot] = await tx
+    let [latestSnapshot] = await tx
       .select({ id: routingSnapshots.id })
       .from(routingSnapshots)
       .where(eq(routingSnapshots.userId, userId))
       .orderBy(desc(routingSnapshots.createdAt))
       .limit(1);
 
+    // First recorded change: persist the before-state as a baseline so every
+    // Reroute Event links two Route Versions and history can always explain it.
+    if (!latestSnapshot) {
+      const baselineGraphId = crypto.randomUUID();
+      const baselineSnapshotId = crypto.randomUUID();
+      await tx.insert(graphVersions).values({
+        id: baselineGraphId,
+        userId,
+        sequenceNumber: ++nextSeq,
+        snapshotData: factsBefore.map(f => ({ id: f.id, payload: f.payload })),
+      });
+      await tx.insert(routingSnapshots).values({
+        id: baselineSnapshotId,
+        userId,
+        graphVersionId: baselineGraphId,
+        focusActionId: previousRoute.focusActionId ?? null,
+      });
+      latestSnapshot = { id: baselineSnapshotId };
+    }
+
     await tx.insert(graphVersions).values({
       id: graphVersionId,
       userId,
-      sequenceNumber: Number(maxSeq) + 1,
-      snapshotData: confirmedFacts.map(f => ({ id: f.id, payload: f.payload })),
+      sequenceNumber: ++nextSeq,
+      snapshotData: factsAfter.map(f => ({ id: f.id, payload: f.payload })),
     });
 
     await tx.insert(routingSnapshots).values({
@@ -116,7 +138,7 @@ export async function recordReroute(
     await tx.insert(rerouteEvents).values({
       id: eventId,
       userId,
-      previousRouteId: latestSnapshot?.id ?? null,
+      previousRouteId: latestSnapshot.id,
       newRouteId: snapshotId,
       triggerReason: reason,
     });
