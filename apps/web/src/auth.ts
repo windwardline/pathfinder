@@ -2,7 +2,8 @@ import NextAuth from "next-auth"
 import Resend from "next-auth/providers/resend"
 import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db, accounts, sessions, users, verificationTokens } from "@pathfinder/core"
-import { eq, and } from "drizzle-orm"
+import { toScannerSafeVerificationUrl } from "@/lib/magic-link"
+import { consumeVerificationToken } from "@/lib/verification-token"
 
 const baseAdapter = DrizzleAdapter(db, {
   usersTable: users,
@@ -11,36 +12,36 @@ const baseAdapter = DrizzleAdapter(db, {
   verificationTokensTable: verificationTokens,
 })
 
+const resendProvider = Resend({
+  name: "Email",
+  apiKey: process.env.RESEND_API_KEY,
+  from: process.env.AUTH_RESEND_FROM || "pathfinder@windwardline.com",
+  maxAge: 15 * 60,
+})
+
+const sendVerificationRequest = resendProvider.sendVerificationRequest
+resendProvider.sendVerificationRequest = params =>
+  sendVerificationRequest({
+    ...params,
+    url: toScannerSafeVerificationUrl(params.url),
+  })
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: {
     ...baseAdapter,
-    useVerificationToken: async ({ identifier, token }) => {
-      try {
-        // Look up the token without deleting it. This solves the infamous NextAuth
-        // bug where enterprise email scanners (like Outlook/SES) pre-fetch the magic link 
-        // and instantly consume the token, preventing the user from logging in.
-        const result = await db
-          .select()
-          .from(verificationTokens)
-          .where(
-            and(
-              eq(verificationTokens.identifier, identifier),
-              eq(verificationTokens.token, token)
-            )
-          )
-        return result[0] ?? null
-      } catch {
-        throw new Error("No verification token found.")
-      }
-    },
+    // Auth.js requires this operation to be atomic and single-use. Email
+    // scanners receive the inert /verify landing URL instead of this callback,
+    // so scanner compatibility does not weaken replay protection.
+    useVerificationToken: ({ identifier, token }) =>
+      consumeVerificationToken(identifier, token),
   },
   providers: [
-    Resend({
-      name: "Email Magic Link",
-      apiKey: process.env.RESEND_API_KEY,
-      from: "pathfinder@windwardline.com", // Adjust domain to your verified Resend domain
-    }),
+    resendProvider,
   ],
+  pages: {
+    signIn: "/signin",
+    verifyRequest: "/check-email",
+  },
   callbacks: {
     session({ session, user }) {
       if (session.user) {

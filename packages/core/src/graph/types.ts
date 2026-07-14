@@ -15,6 +15,18 @@ export interface Action extends GraphNode {
   title: string;
   description: string;
   status: 'OPEN' | 'COMPLETED' | 'BLOCKED';
+  createdAt?: Date;
+  provenance: Provenance[];
+  routing?: {
+    criticalDeadline?: boolean;
+    deadline?: string;
+    mandatoryObligation?: boolean;
+    blockerReduction?: number;
+    goalAlignment?: number;
+    userPriority?: number;
+    conflictAvoidance?: number;
+    effortCost?: number;
+  };
 }
 
 export interface Requirement extends GraphNode {
@@ -45,3 +57,4 @@ export interface Dependency {
   targetId: string;
   type: 'BLOCKS' | 'REQUIRES' | 'CONSTRAINS' | 'COMPLETES';
 }
+import type { Provenance } from '../domain/Provenance';

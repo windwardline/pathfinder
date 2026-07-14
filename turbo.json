@@ -1,15 +1,21 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["NODE_ENV"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": ["POSTGRES_URL", "DATABASE_URL", "AUTH_SECRET", "RESEND_API_KEY", "GROQ_API_KEY", "GROQ_MODEL", "AUTH_RESEND_FROM"],
       "outputs": [".next/**", "!.next/cache/**"]
     },
     "lint": {
       "dependsOn": ["^lint"]
     },
     "test": {
-      "dependsOn": ["^test"]
+      "dependsOn": ["^test"],
+      "env": ["POSTGRES_URL", "DATABASE_URL"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
     },
     "dev": {
       "cache": false,
