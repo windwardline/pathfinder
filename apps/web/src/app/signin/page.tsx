@@ -2,6 +2,7 @@ import { auth, signIn } from '@/auth';
 import { redirect } from 'next/navigation';
 import { Compass } from 'lucide-react';
 import { TopoBackdrop } from '@/components/TopoBackdrop';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export const metadata = { title: 'Sign in' };
 
@@ -60,6 +61,8 @@ export default async function SignInPage({
             <p role="alert" className="mt-4 rounded-lg bg-brick-soft px-4 py-3 text-sm text-brick">
               {error === 'Verification'
                 ? 'That sign-in link has expired or was already used. Request a new one below.'
+                : error === 'RateLimit'
+                  ? 'Too many sign-in links were requested. Please wait a few minutes and try again.'
                 : 'Sign-in did not work. Please try again.'}
             </p>
           )}
@@ -67,8 +70,12 @@ export default async function SignInPage({
           <form
             action={async (formData: FormData) => {
               'use server';
+              const email = String(formData.get('email') ?? '').trim().toLowerCase();
+              if (!(await checkRateLimit(`signin:${email}`, 5, 15 * 60_000))) {
+                redirect('/signin?error=RateLimit');
+              }
               await signIn('resend', {
-                email: formData.get('email'),
+                email,
                 redirectTo: '/',
               });
             }}

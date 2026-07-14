@@ -11,9 +11,8 @@ import { normalizeOrderingEdges } from '../graph/edges';
  * 1. Completed Actions are contracted out of the graph first, so ordering and
  *    Focus selection depend only on the remaining actionable work — never on
  *    the ids or titles of Actions that are already done.
- * 2. The remaining DAG is ordered with Kahn's algorithm using a stable
- *    (title, actionId) lexicographic tie-break, which yields a deterministic
- *    total order that respects dependency layers.
+ * 2. The remaining DAG is ordered with Kahn's algorithm using the canonical
+ *    lexicographic ranking tuple, followed by stable title/id tie-breaks.
  * 3. The Focus Action is the first currently-available Action in that order.
  * 4. Completed Actions are appended last, in stable order, for Route History.
  */
@@ -37,7 +36,7 @@ export class RouteEngine {
     const edges = normalizeOrderingEdges(actionIds, graph.dependencies);
 
     const isCompleted = (id: string) => byId.get(id)!.status === 'COMPLETED';
-    const compare = (a: string, b: string) => {
+    const stableCompare = (a: string, b: string) => {
       const ta = byId.get(a)!.title;
       const tb = byId.get(b)!.title;
       return ta.localeCompare(tb) || a.localeCompare(b);
@@ -50,6 +49,52 @@ export class RouteEngine {
       childrenOf.set(e.fromId, [...(childrenOf.get(e.fromId) || []), e.toId]);
       parentsOf.set(e.toId, [...(parentsOf.get(e.toId) || []), e.fromId]);
     }
+
+    const transitiveUnlockCount = (id: string): number => {
+      const seen = new Set<string>();
+      const pending = [...(childrenOf.get(id) || [])];
+      while (pending.length > 0) {
+        const child = pending.pop()!;
+        if (seen.has(child) || isCompleted(child)) continue;
+        seen.add(child);
+        pending.push(...(childrenOf.get(child) || []));
+      }
+      return seen.size;
+    };
+
+    const boolRank = (value: boolean | undefined) => (value ? 1 : 0);
+    const numberRank = (value: number | undefined) =>
+      Number.isFinite(value) ? Number(value) : 0;
+    const deadlineRank = (value: string | undefined) => {
+      if (!value) return Number.POSITIVE_INFINITY;
+      const parsed = Date.parse(value);
+      return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+    };
+    const createdAtRank = (value: Date | undefined) => value?.getTime() ?? 0;
+
+    /** Higher-value factors sort first; deadline/effort/timestamps sort earlier first. */
+    const compare = (a: string, b: string) => {
+      const aa = byId.get(a)!;
+      const bb = byId.get(b)!;
+      const ar = aa.routing;
+      const br = bb.routing;
+
+      return (
+        boolRank(br?.criticalDeadline) - boolRank(ar?.criticalDeadline) ||
+        deadlineRank(ar?.deadline) - deadlineRank(br?.deadline) ||
+        boolRank(br?.mandatoryObligation) - boolRank(ar?.mandatoryObligation) ||
+        boolRank((childrenOf.get(b) || []).some(id => !isCompleted(id))) -
+          boolRank((childrenOf.get(a) || []).some(id => !isCompleted(id))) ||
+        transitiveUnlockCount(b) - transitiveUnlockCount(a) ||
+        numberRank(br?.blockerReduction) - numberRank(ar?.blockerReduction) ||
+        numberRank(br?.goalAlignment) - numberRank(ar?.goalAlignment) ||
+        numberRank(br?.userPriority) - numberRank(ar?.userPriority) ||
+        numberRank(br?.conflictAvoidance) - numberRank(ar?.conflictAvoidance) ||
+        numberRank(ar?.effortCost) - numberRank(br?.effortCost) ||
+        createdAtRank(aa.createdAt) - createdAtRank(bb.createdAt) ||
+        stableCompare(a, b)
+      );
+    };
 
     // Contracted graph: incomplete actions only; edges from completed sources
     // are satisfied and edges into completed targets are irrelevant.
@@ -85,13 +130,13 @@ export class RouteEngine {
     const openUnlocks = (id: string) =>
       (childrenOf.get(id) || [])
         .filter(childId => !isCompleted(childId))
-        .sort(compare)
+        .sort(stableCompare)
         .map(childId => byId.get(childId)!.title);
 
     const openBlockers = (id: string) =>
       (parentsOf.get(id) || [])
         .filter(parentId => !isCompleted(parentId))
-        .sort(compare)
+        .sort(stableCompare)
         .map(parentId => byId.get(parentId)!.title);
 
     const steps: RouteStep[] = [];
@@ -109,15 +154,34 @@ export class RouteEngine {
 
       if (available) {
         status = id === focusActionId ? RouteStepStatus.FOCUS : RouteStepStatus.UPCOMING;
+        if (action.routing?.criticalDeadline) reasonCodes.push('CRITICAL_DEADLINE');
+        if (action.routing?.mandatoryObligation) reasonCodes.push('MANDATORY_OBLIGATION');
         if (unlocks.length >= 1) reasonCodes.push('HARD_PREREQUISITE');
         if (unlocks.length >= 2) reasonCodes.push('HIGH_UNLOCK_VALUE');
+        if (numberRank(action.routing?.blockerReduction) > 0) {
+          reasonCodes.push('BLOCKER_REMOVAL');
+        }
+        if (
+          numberRank(action.routing?.goalAlignment) > 0 ||
+          numberRank(action.routing?.userPriority) > 0
+        ) {
+          reasonCodes.push('USER_PRIORITY');
+        }
+        if (numberRank(action.routing?.conflictAvoidance) > 0) {
+          reasonCodes.push('CONFLICT_AVOIDANCE');
+        }
+        if (action.routing?.effortCost !== undefined) reasonCodes.push('LOWER_EFFORT');
         if (initiallyAvailable.size === 1) {
           reasonCodes.push('ONLY_ELIGIBLE_ACTION');
         } else {
           reasonCodes.push('STABLE_TIE_BREAK');
         }
 
-        if (unlocks.length >= 1) {
+        if (action.routing?.criticalDeadline && action.routing.deadline) {
+          explanation = `This comes next because it protects the confirmed deadline on ${formatDeadline(action.routing.deadline)}.`;
+        } else if (action.routing?.mandatoryObligation) {
+          explanation = 'This comes next because it protects a confirmed mandatory Obligation.';
+        } else if (unlocks.length >= 1) {
           explanation = `This comes next because it is required before you can complete ${asCompletable(unlocks[0])}.`;
         } else if (initiallyAvailable.size === 1) {
           explanation = 'This comes next because it is the only Action currently available.';
@@ -141,6 +205,7 @@ export class RouteEngine {
         rank: rank++,
         unlocks,
         blockedBy,
+        provenance: action.provenance,
       });
     }
 
@@ -149,7 +214,7 @@ export class RouteEngine {
     const completedIds = actions
       .filter(a => isCompleted(a.id))
       .map(a => a.id)
-      .sort(compare);
+      .sort(stableCompare);
     for (const id of completedIds) {
       const action = byId.get(id)!;
       steps.push({
@@ -162,6 +227,7 @@ export class RouteEngine {
         rank: rank++,
         unlocks: openUnlocks(id),
         blockedBy: [],
+        provenance: action.provenance,
       });
     }
 
@@ -180,6 +246,12 @@ export class RouteEngine {
       status
     );
   }
+}
+
+function formatDeadline(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toISOString().slice(0, 10);
 }
 
 function formatList(items: string[]): string {

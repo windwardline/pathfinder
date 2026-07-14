@@ -1,16 +1,31 @@
-// Minimal per-instance sliding-window limiter. Serverless instances each get
-// their own window, which is acceptable protection for Release 1's paid AI
-// endpoint; move to a shared store if abuse becomes a real concern.
-const windows = new Map<string, number[]>();
+import { apiRateLimits, db } from '@pathfinder/core';
+import { sql } from 'drizzle-orm';
+import type { DatabaseExecutor } from './route-service';
 
-export function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
+/** Atomic fixed-window limiter shared by every application instance. */
+export async function checkRateLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+  executor: DatabaseExecutor = db
+): Promise<boolean> {
   const now = Date.now();
-  const hits = (windows.get(key) || []).filter(t => now - t < windowMs);
-  if (hits.length >= limit) {
-    windows.set(key, hits);
-    return false;
-  }
-  hits.push(now);
-  windows.set(key, hits);
-  return true;
+  const cutoff = new Date(now - windowMs);
+  const windowStart = new Date(now);
+  const cutoffIso = cutoff.toISOString();
+  const windowStartIso = windowStart.toISOString();
+  const [row] = await executor
+    .insert(apiRateLimits)
+    .values({ key, windowStart, count: 1, updatedAt: windowStart })
+    .onConflictDoUpdate({
+      target: apiRateLimits.key,
+      set: {
+        count: sql<number>`case when ${apiRateLimits.windowStart} <= ${cutoffIso}::timestamp then 1 else ${apiRateLimits.count} + 1 end`,
+        windowStart: sql<Date>`case when ${apiRateLimits.windowStart} <= ${cutoffIso}::timestamp then ${windowStartIso}::timestamp else ${apiRateLimits.windowStart} end`,
+        updatedAt: windowStart,
+      },
+    })
+    .returning({ count: apiRateLimits.count });
+
+  return row.count <= limit;
 }

@@ -106,3 +106,11 @@ export const rerouteEvents = pgTable("reroute_event", {
   triggerReason: text("triggerReason").notNull(),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
 });
+
+/** Shared fixed-window API limiter; safe across serverless instances. */
+export const apiRateLimits = pgTable("api_rate_limit", {
+  key: text("key").primaryKey(),
+  windowStart: timestamp("windowStart", { mode: "date" }).notNull(),
+  count: integer("count").notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+});

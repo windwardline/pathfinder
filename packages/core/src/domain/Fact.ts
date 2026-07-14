@@ -15,6 +15,17 @@ export interface ActionFactPayload {
     title: string;
     description: string;
     status: ActionStatus;
+    /** Deterministic Release 1 ranking inputs. Omitted factors use neutral defaults. */
+    routing?: {
+      criticalDeadline?: boolean;
+      deadline?: string;
+      mandatoryObligation?: boolean;
+      blockerReduction?: number;
+      goalAlignment?: number;
+      userPriority?: number;
+      conflictAvoidance?: number;
+      effortCost?: number;
+    };
   };
 }
 
@@ -42,5 +53,7 @@ export interface Fact {
   createdAt: Date;
   updatedAt: Date;
   provenance?: Provenance;
+  /** Complete immutable provenance trail, oldest source first. */
+  provenanceHistory?: Provenance[];
   supersededByFactId?: string;
 }

@@ -11,8 +11,8 @@ export interface OrderingEdge {
  * Normalize raw dependencies into ordering edges between known Action ids.
  * BLOCKS(source, target) means source must complete before target.
  * REQUIRES(source, target) means source requires target, i.e. target completes first.
- * Edges referencing unknown ids (dangling) are ignored so a stale Dependency
- * fact can never block an Action forever.
+ * GraphVersion validates references before calling this helper. The membership
+ * guard remains defensive for callers working with already-validated graphs.
  */
 export function normalizeOrderingEdges(
   actionIds: ReadonlySet<string>,

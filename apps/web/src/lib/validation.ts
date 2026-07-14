@@ -5,7 +5,21 @@ export const actionPayloadSchema = z.object({
   value: z.object({
     title: z.string().trim().min(1).max(120),
     description: z.string().trim().max(500).default(''),
-    status: z.enum(['OPEN', 'COMPLETED']).default('OPEN'),
+    // Lifecycle state is server-owned. New Actions always start open and may
+    // become completed only through /api/actions/complete.
+    status: z.literal('OPEN').default('OPEN'),
+    routing: z
+      .object({
+        criticalDeadline: z.boolean().optional(),
+        deadline: z.string().datetime().optional(),
+        mandatoryObligation: z.boolean().optional(),
+        blockerReduction: z.number().int().min(0).max(10_000).optional(),
+        goalAlignment: z.number().int().min(0).max(100).optional(),
+        userPriority: z.number().int().min(0).max(100).optional(),
+        conflictAvoidance: z.number().int().min(0).max(10_000).optional(),
+        effortCost: z.number().min(0).max(10_000).optional(),
+      })
+      .optional(),
   }),
   sourceText: z.string().trim().max(1000).optional(),
 });

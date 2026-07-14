@@ -26,6 +26,8 @@ export interface RouteStep {
   unlocks: string[];
   /** Titles of incomplete Actions this step is waiting on. */
   blockedBy: string[];
+  /** Traceable sources supporting the Action itself. */
+  provenance: Provenance[];
 }
 
 export class RouteVersion {
@@ -51,3 +53,4 @@ export class RouteVersion {
     this.createdAt = new Date();
   }
 }
+import type { Provenance } from '../domain/Provenance';

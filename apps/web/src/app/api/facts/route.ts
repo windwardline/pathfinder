@@ -10,6 +10,16 @@ import {
   recordProvenance,
   toDomainFact,
 } from '@/lib/route-service';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+class FactMutationError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly publicMessage: string
+  ) {
+    super(publicMessage);
+  }
+}
 
 /**
  * Facts API. Proposed Facts never affect the Route; confirming a fact is an
@@ -22,6 +32,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const userId = session.user.id;
+
+  if (!(await checkRateLimit(`facts:${userId}`, 60, 60_000))) {
+    return NextResponse.json(
+      { error: 'Too many Fact updates. Please wait a moment.' },
+      { status: 429 }
+    );
+  }
 
   let body: unknown;
   try {
@@ -43,64 +60,95 @@ export async function POST(request: Request) {
 
     if (req.action === 'propose') {
       const factId = crypto.randomUUID();
-      const [created] = await db
-        .insert(factsTable)
-        .values({
-          id: factId,
-          userId,
-          factText: JSON.stringify(req.payload),
-          status: FactStatus.Proposed,
-        })
-        .returning();
-
-      await recordProvenance(factId, req.provenance.source, req.provenance.confidence);
+      const created = await db.transaction(async tx => {
+        const [row] = await tx
+          .insert(factsTable)
+          .values({
+            id: factId,
+            userId,
+            factText: JSON.stringify(req.payload),
+            status: FactStatus.Proposed,
+          })
+          .returning();
+        await recordProvenance(
+          factId,
+          req.provenance.source,
+          req.provenance.confidence,
+          undefined,
+          tx
+        );
+        return row;
+      });
 
       return NextResponse.json({ success: true, fact: serializeFact(created) });
     }
 
-    // confirm / reject operate on an existing Proposed fact owned by the user.
-    const [existing] = await db
-      .select()
-      .from(factsTable)
-      .where(and(eq(factsTable.id, req.factId), eq(factsTable.userId, userId)))
-      .limit(1);
-
-    if (!existing) {
-      return NextResponse.json({ error: 'Fact not found' }, { status: 404 });
-    }
-    if (existing.status !== FactStatus.Proposed) {
-      return NextResponse.json(
-        { error: `Only Proposed Facts can be ${req.action}ed.` },
-        { status: 409 }
-      );
-    }
-
-    if (req.action === 'reject') {
-      const [updated] = await db
-        .update(factsTable)
-        .set({ status: FactStatus.Rejected, updatedAt: new Date() })
+    const result = await db.transaction(async tx => {
+      // The version and lifecycle predicates make this transition compare-and-
+      // swap: concurrent confirm/reject requests cannot both succeed.
+      const [existing] = await tx
+        .select()
+        .from(factsTable)
         .where(and(eq(factsTable.id, req.factId), eq(factsTable.userId, userId)))
+        .limit(1);
+      if (!existing) throw new FactMutationError(404, 'Fact not found');
+      if (existing.status !== FactStatus.Proposed) {
+        throw new FactMutationError(
+          409,
+          `Only Proposed Facts can be ${req.action}ed.`
+        );
+      }
+
+      if (req.action === 'reject') {
+        const [updated] = await tx
+          .update(factsTable)
+          .set({
+            status: FactStatus.Rejected,
+            version: existing.version + 1,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(factsTable.id, req.factId),
+              eq(factsTable.userId, userId),
+              eq(factsTable.status, FactStatus.Proposed),
+              eq(factsTable.version, existing.version)
+            )
+          )
+          .returning();
+        if (!updated) {
+          throw new FactMutationError(409, 'This Fact changed before rejection completed.');
+        }
+        return { updated, reroute: null };
+      }
+
+      const factsBefore = await loadConfirmedFacts(userId, tx);
+      const routeBefore = buildRoute(factsBefore);
+      const [updated] = await tx
+        .update(factsTable)
+        .set({
+          status: FactStatus.Confirmed,
+          version: existing.version + 1,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(factsTable.id, req.factId),
+            eq(factsTable.userId, userId),
+            eq(factsTable.status, FactStatus.Proposed),
+            eq(factsTable.version, existing.version)
+          )
+        )
         .returning();
-      return NextResponse.json({ success: true, fact: serializeFact(updated) });
-    }
+      if (!updated) {
+        throw new FactMutationError(409, 'This Fact changed before confirmation completed.');
+      }
 
-    // action === 'confirm': capture the Route before, apply, recompute after.
-    const factsBefore = await loadConfirmedFacts(userId);
-    const routeBefore = buildRoute(factsBefore);
-
-    const [updated] = await db
-      .update(factsTable)
-      .set({ status: FactStatus.Confirmed, updatedAt: new Date() })
-      .where(and(eq(factsTable.id, req.factId), eq(factsTable.userId, userId)))
-      .returning();
-
-    await recordProvenance(req.factId, 'user_confirmation');
-
-    const factsAfter = await loadConfirmedFacts(userId);
-    let reroute = null;
-    try {
+      await recordProvenance(req.factId, 'user_confirmation', undefined, undefined, tx);
+      const factsAfter = await loadConfirmedFacts(userId, tx);
       const routeAfter = buildRoute(factsAfter);
-      reroute = await recordReroute(
+      const reroute = await recordReroute(
+        tx,
         userId,
         RerouteReason.FACT_CONFIRMED,
         routeBefore,
@@ -108,32 +156,28 @@ export async function POST(request: Request) {
         factsBefore,
         factsAfter
       );
-    } catch (e) {
-      if (e instanceof GraphVersionError) {
-        // The newly confirmed fact makes the graph unbuildable (e.g. a cycle).
-        // Revert the confirmation so the last valid Route is preserved.
-        await db
-          .update(factsTable)
-          .set({ status: FactStatus.Proposed, updatedAt: new Date() })
-          .where(and(eq(factsTable.id, req.factId), eq(factsTable.userId, userId)));
-        console.error('Confirmation reverted, graph rejected:', e.message);
-        return NextResponse.json(
-          {
-            error:
-              'Confirming this fact would create conflicting dependencies, so it was left as Proposed. Your Route is unchanged.',
-          },
-          { status: 422 }
-        );
-      }
-      throw e;
-    }
+      return { updated, reroute };
+    });
 
     return NextResponse.json({
       success: true,
-      fact: serializeFact(updated),
-      reroute,
+      fact: serializeFact(result.updated),
+      reroute: result.reroute,
     });
   } catch (error) {
+    if (error instanceof FactMutationError) {
+      return NextResponse.json({ error: error.publicMessage }, { status: error.status });
+    }
+    if (error instanceof GraphVersionError) {
+      console.error('Confirmation rejected by Route validation:', error.message);
+      return NextResponse.json(
+        {
+          error:
+            'Confirming this Fact would create invalid or conflicting Route data, so it remains Proposed. Your Route is unchanged.',
+        },
+        { status: 422 }
+      );
+    }
     console.error('POST /api/facts failed:', error);
     return NextResponse.json(
       { error: 'The request could not be completed. Please try again.' },

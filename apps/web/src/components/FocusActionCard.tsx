@@ -20,6 +20,9 @@ export function FocusActionCard({
   onComplete: (actionId: string) => void;
 }) {
   const [showReasons, setShowReasons] = useState(false);
+  const provenanceSources = [
+    ...new Set(step.provenance.map(item => provenanceLabel(item.source))),
+  ];
 
   return (
     <article
@@ -61,6 +64,12 @@ export function FocusActionCard({
               ))}
             </div>
           )}
+          {provenanceSources.length > 0 && (
+            <p className="mt-3 text-xs leading-relaxed text-ink-soft">
+              <span className="font-medium">Supported by:</span>{' '}
+              {provenanceSources.join(' · ')}
+            </p>
+          )}
           <button
             onClick={() => setShowReasons(v => !v)}
             aria-expanded={showReasons}
@@ -97,4 +106,15 @@ export function FocusActionCard({
       </div>
     </article>
   );
+}
+
+function provenanceLabel(source: string): string {
+  const labels: Record<string, string> = {
+    ai_extraction: 'document extraction you confirmed',
+    user_input: 'information you entered',
+    user_confirmation: 'your confirmation',
+    user_completion: 'your completion update',
+    seed_demonstration: 'demonstration scenario source',
+  };
+  return labels[source] ?? source.replaceAll('_', ' ');
 }

@@ -26,47 +26,57 @@ export function RerouteSummary({
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const { difference } = reroute;
 
   useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    dialog?.showModal();
     closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+    return () => {
+      if (dialog?.open) dialog.close();
+      previouslyFocused?.focus();
+    };
+  }, []);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/25 p-4 backdrop-blur-[2px] sm:items-center"
-      onClick={onClose}
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="reroute-title"
+      onCancel={event => {
+        event.preventDefault();
+        onClose();
+      }}
+      className="fixed inset-0 z-50 m-0 h-dvh max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-ink/25 backdrop:backdrop-blur-[2px]"
     >
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="reroute-title"
-        onClick={e => e.stopPropagation()}
-        className="w-full max-w-lg rounded-2xl border border-hairline bg-surface p-7 shadow-xl"
+        className="flex min-h-full items-end justify-center p-4 sm:items-center"
+        onClick={event => {
+          if (event.target === event.currentTarget) onClose();
+        }}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-widest text-spruce">
-              Your Route was updated
-            </p>
-            <h2 id="reroute-title" className="mt-1.5 font-serif text-2xl">
-              {REASON_LABELS[reroute.reason] ?? 'Your circumstances changed'}
-            </h2>
+        <div className="w-full max-w-lg rounded-2xl border border-hairline bg-surface p-7 text-ink shadow-xl">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-widest text-spruce">
+                Your Route was updated
+              </p>
+              <h2 id="reroute-title" className="mt-1.5 font-serif text-2xl">
+                {REASON_LABELS[reroute.reason] ?? 'Your circumstances changed'}
+              </h2>
+            </div>
+            <button
+              ref={closeRef}
+              onClick={onClose}
+              aria-label="Close Reroute summary"
+              className="rounded-md p-1.5 text-ink-faint transition-colors hover:bg-raised hover:text-ink"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            ref={closeRef}
-            onClick={onClose}
-            aria-label="Close Reroute summary"
-            className="rounded-md p-1.5 text-ink-faint transition-colors hover:bg-raised hover:text-ink"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
 
-        <dl className="mt-6 space-y-4 text-sm">
+          <dl className="mt-6 space-y-4 text-sm">
           {difference.focusActionChanged && difference.newFocus && (
             <DiffSection label="Your new Focus Action">
               <span className="font-serif text-base">{difference.newFocus.title}</span>
@@ -102,16 +112,17 @@ export function RerouteSummary({
               {difference.moved.map(m => `${m.title} (#${m.fromRank} → #${m.toRank})`).join(', ')}
             </DiffSection>
           )}
-        </dl>
+          </dl>
 
-        <button
-          onClick={onClose}
-          className="mt-7 w-full rounded-lg bg-spruce px-5 py-2.5 text-sm font-medium text-paper transition-opacity hover:opacity-90"
-        >
-          Back to your Route
-        </button>
+          <button
+            onClick={onClose}
+            className="mt-7 w-full rounded-lg bg-spruce px-5 py-2.5 text-sm font-medium text-paper transition-opacity hover:opacity-90"
+          >
+            Back to your Route
+          </button>
+        </div>
       </div>
-    </div>
+    </dialog>
   );
 }
 

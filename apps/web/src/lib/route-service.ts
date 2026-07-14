@@ -15,23 +15,37 @@ import {
   computeRouteDifference,
   RerouteReason,
 } from '@pathfinder/core';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 
 export type FactRow = typeof factsTable.$inferSelect;
+export type ProvenanceRow = typeof provenanceTable.$inferSelect;
+export type DatabaseExecutor = Pick<
+  typeof db,
+  'select' | 'insert' | 'update' | 'delete' | 'execute'
+>;
 
 /** Parse a DB fact row into a domain Fact. Returns null for corrupt payloads. */
-export function toDomainFact(row: FactRow): Fact | null {
+export function toDomainFact(row: FactRow, provenanceRows: ProvenanceRow[] = []): Fact | null {
   try {
     const payload = JSON.parse(row.factText);
     if (!payload || typeof payload !== 'object' || typeof payload.key !== 'string') {
       return null;
     }
+    const provenanceHistory = provenanceRows.map(item => ({
+      source: item.source,
+      confidence: item.confidence ?? undefined,
+      sourceText:
+        typeof payload.sourceText === 'string' ? payload.sourceText : undefined,
+      derivedFromFactId: item.derivedFromFactId ?? undefined,
+    }));
     return {
       id: row.id,
       payload,
       status: row.status as FactStatus,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      provenance: provenanceHistory[0],
+      provenanceHistory,
     };
   } catch {
     console.error(`Skipping fact ${row.id}: payload is not valid JSON`);
@@ -39,16 +53,38 @@ export function toDomainFact(row: FactRow): Fact | null {
   }
 }
 
-export async function loadFactRows(userId: string): Promise<FactRow[]> {
-  return db.select().from(factsTable).where(eq(factsTable.userId, userId));
+export async function loadFactRows(
+  userId: string,
+  executor: DatabaseExecutor = db
+): Promise<FactRow[]> {
+  return executor.select().from(factsTable).where(eq(factsTable.userId, userId));
 }
 
-export async function loadConfirmedFacts(userId: string): Promise<Fact[]> {
-  const rows = await db
+export async function loadConfirmedFacts(
+  userId: string,
+  executor: DatabaseExecutor = db
+): Promise<Fact[]> {
+  const rows = await executor
     .select()
     .from(factsTable)
     .where(and(eq(factsTable.userId, userId), eq(factsTable.status, FactStatus.Confirmed)));
-  return rows.map(toDomainFact).filter((f): f is Fact => f !== null);
+  const provenanceRows = rows.length
+    ? await executor
+        .select()
+        .from(provenanceTable)
+        .where(inArray(provenanceTable.factId, rows.map(row => row.id)))
+        .orderBy(asc(provenanceTable.createdAt), asc(provenanceTable.id))
+    : [];
+  const provenanceByFact = new Map<string, ProvenanceRow[]>();
+  for (const item of provenanceRows) {
+    provenanceByFact.set(item.factId, [
+      ...(provenanceByFact.get(item.factId) ?? []),
+      item,
+    ]);
+  }
+  return rows
+    .map(row => toDomainFact(row, provenanceByFact.get(row.id)))
+    .filter((fact): fact is Fact => fact !== null);
 }
 
 /** Build the deterministic Route for a set of Confirmed Facts. */
@@ -71,6 +107,7 @@ export interface RerouteRecord {
  * recorded; reads never write (route generation itself is pure).
  */
 export async function recordReroute(
+  executor: DatabaseExecutor,
   userId: string,
   reason: RerouteReason,
   previousRoute: RouteVersion,
@@ -83,65 +120,57 @@ export async function recordReroute(
     return null;
   }
 
-  const graphVersionId = crypto.randomUUID();
-  const snapshotId = crypto.randomUUID();
+  const previousGraphVersionId = crypto.randomUUID();
+  const previousSnapshotId = crypto.randomUUID();
+  const newGraphVersionId = crypto.randomUUID();
+  const newSnapshotId = crypto.randomUUID();
   const eventId = crypto.randomUUID();
 
-  await db.transaction(async tx => {
-    const [{ maxSeq }] = await tx
-      .select({ maxSeq: sql<number>`coalesce(max("sequenceNumber"), 0)` })
-      .from(graphVersions)
-      .where(eq(graphVersions.userId, userId));
-    let nextSeq = Number(maxSeq);
+  // Serialize sequence allocation per user. Persist the exact before-state for
+  // every event; timestamp ties can never select an unrelated baseline.
+  await executor.execute(sql`select pg_advisory_xact_lock(hashtext(${userId}))`);
+  const [{ maxSeq }] = await executor
+    .select({ maxSeq: sql<number>`coalesce(max("sequenceNumber"), 0)` })
+    .from(graphVersions)
+    .where(eq(graphVersions.userId, userId));
+  const nextSeq = Number(maxSeq);
 
-    let [latestSnapshot] = await tx
-      .select({ id: routingSnapshots.id })
-      .from(routingSnapshots)
-      .where(eq(routingSnapshots.userId, userId))
-      .orderBy(desc(routingSnapshots.createdAt))
-      .limit(1);
-
-    // First recorded change: persist the before-state as a baseline so every
-    // Reroute Event links two Route Versions and history can always explain it.
-    if (!latestSnapshot) {
-      const baselineGraphId = crypto.randomUUID();
-      const baselineSnapshotId = crypto.randomUUID();
-      await tx.insert(graphVersions).values({
-        id: baselineGraphId,
-        userId,
-        sequenceNumber: ++nextSeq,
-        snapshotData: factsBefore.map(f => ({ id: f.id, payload: f.payload })),
-      });
-      await tx.insert(routingSnapshots).values({
-        id: baselineSnapshotId,
-        userId,
-        graphVersionId: baselineGraphId,
-        focusActionId: previousRoute.focusActionId ?? null,
-      });
-      latestSnapshot = { id: baselineSnapshotId };
-    }
-
-    await tx.insert(graphVersions).values({
-      id: graphVersionId,
+  await executor.insert(graphVersions).values([
+    {
+      id: previousGraphVersionId,
       userId,
-      sequenceNumber: ++nextSeq,
-      snapshotData: factsAfter.map(f => ({ id: f.id, payload: f.payload })),
-    });
-
-    await tx.insert(routingSnapshots).values({
-      id: snapshotId,
+      sequenceNumber: nextSeq + 1,
+      snapshotData: factsBefore.map(serializeSnapshotFact),
+    },
+    {
+      id: newGraphVersionId,
       userId,
-      graphVersionId,
+      sequenceNumber: nextSeq + 2,
+      snapshotData: factsAfter.map(serializeSnapshotFact),
+    },
+  ]);
+
+  await executor.insert(routingSnapshots).values([
+    {
+      id: previousSnapshotId,
+      userId,
+      graphVersionId: previousGraphVersionId,
+      focusActionId: previousRoute.focusActionId ?? null,
+    },
+    {
+      id: newSnapshotId,
+      userId,
+      graphVersionId: newGraphVersionId,
       focusActionId: newRoute.focusActionId ?? null,
-    });
+    },
+  ]);
 
-    await tx.insert(rerouteEvents).values({
-      id: eventId,
-      userId,
-      previousRouteId: latestSnapshot.id,
-      newRouteId: snapshotId,
-      triggerReason: reason,
-    });
+  await executor.insert(rerouteEvents).values({
+    id: eventId,
+    userId,
+    previousRouteId: previousSnapshotId,
+    newRouteId: newSnapshotId,
+    triggerReason: reason,
   });
 
   return { eventId, reason, difference };
@@ -152,9 +181,10 @@ export async function recordProvenance(
   factId: string,
   source: string,
   confidence?: number,
-  derivedFromFactId?: string
+  derivedFromFactId?: string,
+  executor: DatabaseExecutor = db
 ): Promise<void> {
-  await db.insert(provenanceTable).values({
+  await executor.insert(provenanceTable).values({
     factId,
     source,
     confidence: confidence ?? null,
@@ -168,7 +198,11 @@ export function routeFromSnapshotData(snapshotData: unknown, snapshotId: string)
   try {
     const facts: Fact[] = snapshotData
       .filter(
-        (f): f is { id: string; payload: Fact['payload'] } =>
+        (f): f is {
+          id: string;
+          payload: Fact['payload'];
+          provenance?: Fact['provenanceHistory'];
+        } =>
           !!f && typeof f === 'object' && 'id' in f && 'payload' in f
       )
       .map(f => ({
@@ -177,10 +211,21 @@ export function routeFromSnapshotData(snapshotData: unknown, snapshotId: string)
         status: FactStatus.Confirmed,
         createdAt: new Date(0),
         updatedAt: new Date(0),
+        provenance: f.provenance?.[0],
+        provenanceHistory: f.provenance,
       }));
     return buildRoute(facts, snapshotId);
   } catch (e) {
-    console.error(`Could not rebuild route for snapshot ${snapshotId}:`, e);
+    console.error('Could not rebuild route for snapshot %s:', snapshotId, e);
     return null;
   }
+}
+
+function serializeSnapshotFact(fact: Fact) {
+  return {
+    id: fact.id,
+    payload: fact.payload,
+    provenance:
+      fact.provenanceHistory ?? (fact.provenance ? [fact.provenance] : []),
+  };
 }

@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   }
   const userId = session.user.id;
 
-  if (!checkRateLimit(`extract:${userId}`, 10, 60_000)) {
+  if (!(await checkRateLimit(`extract:${userId}`, 10, 60_000))) {
     return NextResponse.json(
       { error: 'Too many extraction requests. Please wait a moment.' },
       { status: 429 }
@@ -43,35 +43,44 @@ export async function POST(request: Request) {
   try {
     const candidates = await AIGateway.extractCandidateActions(parsed.data.text);
 
-    const created = [];
-    for (const candidate of candidates) {
-      const factId = crypto.randomUUID();
-      const payload = {
-        key: 'ACTION' as const,
-        value: {
-          title: candidate.title,
-          description: candidate.description,
-          status: 'OPEN' as const,
-        },
-        sourceText: candidate.sourceText,
-      };
-      const [row] = await db
-        .insert(factsTable)
-        .values({
-          id: factId,
-          userId,
-          factText: JSON.stringify(payload),
-          status: FactStatus.Proposed,
-        })
-        .returning();
-      await recordProvenance(factId, 'ai_extraction', candidate.confidence);
-      created.push({
-        id: row.id,
-        status: row.status,
-        payload,
-        confidence: candidate.confidence,
-      });
-    }
+    const created = await db.transaction(async tx => {
+      const rows = [];
+      for (const candidate of candidates) {
+        const factId = crypto.randomUUID();
+        const payload = {
+          key: 'ACTION' as const,
+          value: {
+            title: candidate.title,
+            description: candidate.description,
+            status: 'OPEN' as const,
+          },
+          sourceText: candidate.sourceText,
+        };
+        const [row] = await tx
+          .insert(factsTable)
+          .values({
+            id: factId,
+            userId,
+            factText: JSON.stringify(payload),
+            status: FactStatus.Proposed,
+          })
+          .returning();
+        await recordProvenance(
+          factId,
+          'ai_extraction',
+          candidate.confidence,
+          undefined,
+          tx
+        );
+        rows.push({
+          id: row.id,
+          status: row.status,
+          payload,
+          confidence: candidate.confidence,
+        });
+      }
+      return rows;
+    });
 
     return NextResponse.json({ success: true, facts: created });
   } catch (error) {

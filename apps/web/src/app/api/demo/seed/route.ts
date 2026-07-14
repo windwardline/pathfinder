@@ -10,6 +10,7 @@ import {
 import { eq } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { recordProvenance } from '@/lib/route-service';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 interface SeedAction {
   ref: string;
@@ -86,48 +87,55 @@ export async function POST() {
   }
   const userId = session.user.id;
 
+  if (!(await checkRateLimit(`demo-seed:${userId}`, 5, 60 * 60_000))) {
+    return NextResponse.json(
+      { error: 'The demonstration scenario was reset too often. Please wait before trying again.' },
+      { status: 429 }
+    );
+  }
+
   try {
     await db.transaction(async tx => {
       await tx.delete(rerouteEvents).where(eq(rerouteEvents.userId, userId));
       await tx.delete(routingSnapshots).where(eq(routingSnapshots.userId, userId));
       await tx.delete(graphVersions).where(eq(graphVersions.userId, userId));
       await tx.delete(factsTable).where(eq(factsTable.userId, userId));
+
+      const idByRef = new Map<string, string>();
+      for (const action of SEED_ACTIONS) {
+        const factId = crypto.randomUUID();
+        idByRef.set(action.ref, factId);
+        await tx.insert(factsTable).values({
+          id: factId,
+          userId,
+          factText: JSON.stringify({
+            key: 'ACTION',
+            value: { title: action.title, description: action.description, status: action.status },
+            sourceText: action.sourceText,
+          }),
+          status: FactStatus.Confirmed,
+        });
+        await recordProvenance(factId, 'seed_demonstration', 100, undefined, tx);
+      }
+
+      for (const [fromRef, toRef] of SEED_DEPENDENCIES) {
+        const factId = crypto.randomUUID();
+        await tx.insert(factsTable).values({
+          id: factId,
+          userId,
+          factText: JSON.stringify({
+            key: 'DEPENDENCY',
+            value: {
+              sourceId: idByRef.get(fromRef),
+              targetId: idByRef.get(toRef),
+              type: 'BLOCKS',
+            },
+          }),
+          status: FactStatus.Confirmed,
+        });
+        await recordProvenance(factId, 'seed_demonstration', 100, undefined, tx);
+      }
     });
-
-    const idByRef = new Map<string, string>();
-    for (const action of SEED_ACTIONS) {
-      const factId = crypto.randomUUID();
-      idByRef.set(action.ref, factId);
-      await db.insert(factsTable).values({
-        id: factId,
-        userId,
-        factText: JSON.stringify({
-          key: 'ACTION',
-          value: { title: action.title, description: action.description, status: action.status },
-          sourceText: action.sourceText,
-        }),
-        status: FactStatus.Confirmed,
-      });
-      await recordProvenance(factId, 'seed_demonstration', 100);
-    }
-
-    for (const [fromRef, toRef] of SEED_DEPENDENCIES) {
-      const factId = crypto.randomUUID();
-      await db.insert(factsTable).values({
-        id: factId,
-        userId,
-        factText: JSON.stringify({
-          key: 'DEPENDENCY',
-          value: {
-            sourceId: idByRef.get(fromRef),
-            targetId: idByRef.get(toRef),
-            type: 'BLOCKS',
-          },
-        }),
-        status: FactStatus.Confirmed,
-      });
-      await recordProvenance(factId, 'seed_demonstration', 100);
-    }
 
     return NextResponse.json({ success: true, seeded: SEED_ACTIONS.length + SEED_DEPENDENCIES.length });
   } catch (error) {

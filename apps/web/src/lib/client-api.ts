@@ -15,6 +15,12 @@ export interface RouteStep {
   rank: number;
   unlocks: string[];
   blockedBy: string[];
+  provenance: Array<{
+    source: string;
+    confidence?: number;
+    sourceText?: string;
+    derivedFromFactId?: string;
+  }>;
 }
 
 export interface Route {

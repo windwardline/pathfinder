@@ -45,7 +45,9 @@ export function computeRouteDifference(
   const added = next.steps.filter(s => !prevMap.has(s.actionId)).map(ref);
   const removed = prev.steps.filter(s => !nextMap.has(s.actionId)).map(ref);
 
-  const newlyAvailable: RouteStepRef[] = [];
+  const newlyAvailable: RouteStepRef[] = next.steps
+    .filter(s => !prevMap.has(s.actionId) && ACTIONABLE.has(s.status))
+    .map(ref);
   const newlyBlocked: RouteStepRef[] = [];
   const completed: RouteStepRef[] = [];
   const moved: MovedStep[] = [];

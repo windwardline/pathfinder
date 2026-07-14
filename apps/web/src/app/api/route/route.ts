@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { FactStatus, GraphVersionError } from '@pathfinder/core';
 import { auth } from '@/auth';
-import { loadFactRows, toDomainFact, buildRoute } from '@/lib/route-service';
+import { loadFactRows, loadConfirmedFacts, buildRoute } from '@/lib/route-service';
 
 /**
  * Returns the current Route computed from the user's Confirmed Facts.
@@ -16,10 +16,7 @@ export async function GET() {
     }
 
     const rows = await loadFactRows(session.user.id);
-    const confirmed = rows
-      .filter(r => r.status === FactStatus.Confirmed)
-      .map(toDomainFact)
-      .filter(f => f !== null);
+    const confirmed = await loadConfirmedFacts(session.user.id);
     const proposedCount = rows.filter(r => r.status === FactStatus.Proposed).length;
 
     const route = buildRoute(confirmed);

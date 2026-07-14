@@ -10,11 +10,27 @@ import {
   computeRouteDifference,
 } from '../src/index';
 
-function actionFact(id: string, title: string, status: 'OPEN' | 'COMPLETED' = 'OPEN', description = 'desc'): Fact {
+function actionFact(
+  id: string,
+  title: string,
+  status: 'OPEN' | 'COMPLETED' = 'OPEN',
+  description = 'desc',
+  routing?: {
+    criticalDeadline?: boolean;
+    deadline?: string;
+    mandatoryObligation?: boolean;
+    blockerReduction?: number;
+    goalAlignment?: number;
+    userPriority?: number;
+    conflictAvoidance?: number;
+    effortCost?: number;
+  }
+): Fact {
   return {
     id,
-    payload: { key: 'ACTION', value: { title, description, status } },
+    payload: { key: 'ACTION', value: { title, description, status, routing } },
     status: FactStatus.Confirmed,
+    provenance: { source: 'test_fixture' },
   } as Fact;
 }
 
@@ -23,6 +39,7 @@ function dependencyFact(id: string, sourceId: string, targetId: string, type: 'B
     id,
     payload: { key: 'DEPENDENCY', value: { sourceId, targetId, type } },
     status: FactStatus.Confirmed,
+    provenance: { source: 'test_fixture' },
   } as Fact;
 }
 
@@ -58,6 +75,7 @@ describe('RouteEngine - Golden Fixtures', () => {
     expect(focus.title).toBe('Obtain a state identification card');
     expect(focus.reasonCodes).toContain('HARD_PREREQUISITE');
     expect(focus.reasonCodes).toContain('HIGH_UNLOCK_VALUE');
+    expect(focus.provenance).toEqual([{ source: 'test_fixture' }]);
     expect(focus.unlocks).toEqual(
       expect.arrayContaining(['Complete employment onboarding', 'Submit the housing application'])
     );
@@ -116,7 +134,7 @@ describe('RouteEngine - Golden Fixtures', () => {
     expect(orderA).toEqual(orderB);
   });
 
-  it('ADR-002: BLOCKED steps are ordered deterministically (dependency layer, then title)', () => {
+  it('ADR-002: BLOCKED steps use ranking factors before the stable title tie-break', () => {
     const facts = [
       actionFact('f-root', 'Apply for the program'),
       actionFact('f-x', 'Zeta follow-up'),
@@ -130,18 +148,52 @@ describe('RouteEngine - Golden Fixtures', () => {
     const blockedOrder = route.steps
       .filter(s => s.status === RouteStepStatus.BLOCKED)
       .map(s => s.title);
-    // Same layer sorts by title (Alpha before Zeta); deeper layers come after.
-    expect(blockedOrder).toEqual(['Alpha follow-up', 'Zeta follow-up', 'Final review']);
+    // Zeta unlocks Final review, so canonical unlock value ranks it before
+    // alphabetically earlier Alpha; the deeper successor still follows both.
+    expect(blockedOrder).toEqual(['Zeta follow-up', 'Alpha follow-up', 'Final review']);
   });
 
-  it('Dangling BLOCKS edge (unknown source) is ignored rather than blocking forever', () => {
+  it('rejects a dangling BLOCKS edge instead of making the dependent Action eligible', () => {
     const facts = [
       actionFact('f-a', 'Attend orientation'),
       dependencyFact('d1', 'f-ghost', 'f-a'),
     ];
+    expect(() => buildRoute(facts)).toThrow(/unknown action/i);
+  });
+
+  it('ranks a hard prerequisite ahead of an unrelated alphabetically earlier Action', () => {
+    const facts = [
+      actionFact('f-optional', 'Apply for an optional program'),
+      actionFact('f-prerequisite', 'Resolve the identification prerequisite'),
+      actionFact('f-onboarding', 'Start employment onboarding'),
+      dependencyFact('d1', 'f-prerequisite', 'f-onboarding'),
+    ];
+
+    expect(buildRoute(facts).focusActionId).toBe('f-prerequisite');
+  });
+
+  it('applies the canonical ranking tuple before the stable title/id tie-break', () => {
+    const facts = [
+      actionFact('f-effort', 'A low-effort optional Action', 'OPEN', 'desc', { effortCost: 1 }),
+      actionFact('f-obligation', 'Protect a mandatory obligation', 'OPEN', 'desc', {
+        mandatoryObligation: true,
+        effortCost: 10,
+      }),
+      actionFact('f-deadline', 'Protect a critical deadline', 'OPEN', 'desc', {
+        criticalDeadline: true,
+        deadline: '2026-07-14T12:00:00.000Z',
+        effortCost: 20,
+      }),
+    ];
+
     const route = buildRoute(facts);
-    const step = route.steps.find(s => s.actionId === 'f-a')!;
-    expect(step.status).toBe(RouteStepStatus.FOCUS);
+    expect(route.focusActionId).toBe('f-deadline');
+    expect(route.steps.map(step => step.actionId)).toEqual([
+      'f-deadline',
+      'f-obligation',
+      'f-effort',
+    ]);
+    expect(route.steps[0].reasonCodes).toContain('CRITICAL_DEADLINE');
   });
 
   it('REQUIRES dependency is honored as the reverse of BLOCKS', () => {
@@ -212,6 +264,21 @@ describe('GraphVersion', () => {
     } as Fact;
     expect(() => new GraphVersion('g', [proposed])).toThrow(/confirmed/i);
   });
+
+  it('rejects route-affecting facts without provenance', () => {
+    const missingProvenance = actionFact('f-a', 'Attend orientation');
+    delete missingProvenance.provenance;
+    expect(() => new GraphVersion('g', [missingProvenance])).toThrow(/provenance/i);
+  });
+
+  it('rejects duplicate Action ids', () => {
+    expect(() =>
+      new GraphVersion('g', [
+        actionFact('f-a', 'Attend orientation'),
+        actionFact('f-a', 'Duplicate orientation'),
+      ])
+    ).toThrow(/duplicate/i);
+  });
 });
 
 describe('computeRouteDifference', () => {
@@ -249,5 +316,18 @@ describe('computeRouteDifference', () => {
     expect(diff.added).toEqual([]);
     expect(diff.removed).toEqual([]);
     expect(diff.isMeaningful).toBe(false);
+  });
+
+  it('classifies a newly added actionable step as newly available', () => {
+    const before = buildRoute([actionFact('f-a', 'Existing Action')], 'g-before', 's-before');
+    const after = buildRoute(
+      [actionFact('f-a', 'Existing Action'), actionFact('f-b', 'Newly confirmed Action')],
+      'g-after',
+      's-after'
+    );
+
+    const diff = computeRouteDifference(before, after);
+    expect(diff.added.map(s => s.actionId)).toContain('f-b');
+    expect(diff.newlyAvailable.map(s => s.actionId)).toContain('f-b');
   });
 });
