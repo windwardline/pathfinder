@@ -6,7 +6,7 @@ Pathfinder builds and continuously updates a user's Reentry Route. It shows what
 
 - Product baseline: Version 2 Design Freeze
 - Implementation scope: Release 1
-- Current phase: Repository Foundation
+- Current phase: Release 1 production candidate
 - Canonical source: Markdown documentation in [`docs/`](docs/)
 
 Instructor publications are derived artifacts. They do not supersede the canonical Markdown corpus.
@@ -66,10 +66,10 @@ the repository):
 | `RESEND_API_KEY` | Magic-link sign-in email delivery |
 | `AUTH_RESEND_FROM` | Verified sender address for sign-in email |
 | `GROQ_API_KEY` | AI fact extraction (optional — the app degrades gracefully) |
-| `GROQ_MODEL` | Optional model override (default `openai/gpt-oss-20b`) |
+| `GROQ_MODEL` | Optional model override (default `openai/gpt-oss-120b`) |
 
-Apply the database schema to a fresh database with
-`pnpm --filter @pathfinder/core db:push`. A signed-in user can load the
+Apply versioned database migrations with
+`pnpm --filter @pathfinder/core db:migrate`. A signed-in user can load the
 seeded demonstration scenario (SD-001) from the empty state on Today.
 
 ## Repository Layout

@@ -1,54 +1,58 @@
-import { NextResponse } from 'next/server';
 import { FactStatus, GraphVersionError } from '@pathfinder/core';
 import { auth } from '@/auth';
-import { loadFactRows, loadConfirmedFacts, buildRoute } from '@/lib/route-service';
+import { apiError, apiSuccess, correlationId } from '@/lib/api-response';
+import { loadCurrentRoute, loadFactRows } from '@/lib/route-service';
 
-/**
- * Returns the current Route computed from the user's Confirmed Facts.
- * Route generation is pure: reads never write. Snapshots and Reroute
- * Events are persisted by the mutations that change Confirmed Facts.
- */
-export async function GET() {
+/** Returns the current published Route Version. Reads never publish or mutate. */
+export async function GET(request?: Request) {
+  const correlation = correlationId(request);
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiError({
+        status: 401,
+        code: 'UNAUTHORIZED',
+        message: 'Unauthorized',
+        correlationId: correlation,
+      });
     }
 
     const rows = await loadFactRows(session.user.id);
-    const confirmed = await loadConfirmedFacts(session.user.id);
-    const proposedCount = rows.filter(r => r.status === FactStatus.Proposed).length;
-
-    const route = buildRoute(confirmed);
-
-    return NextResponse.json({
-      success: true,
-      route: {
-        id: route.id,
-        status: route.status,
-        focusActionId: route.focusActionId ?? null,
-        steps: route.steps,
-        createdAt: route.createdAt,
+    const route = await loadCurrentRoute(session.user.id);
+    return apiSuccess(
+      {
+        route: {
+          id: route.id,
+          status: route.status,
+          focusActionId: route.focusActionId ?? null,
+          steps: route.steps,
+          createdAt: route.createdAt,
+        },
+        proposedCount: rows.filter(row => row.status === FactStatus.Proposed).length,
+        confirmedCount: rows.filter(row => row.status === FactStatus.Confirmed).length,
       },
-      proposedCount,
-      confirmedCount: confirmed.length,
-    });
+      request,
+      200,
+      correlation
+    );
   } catch (error) {
     if (error instanceof GraphVersionError) {
-      console.error('Route engine rejected the confirmed fact set:', error.message);
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            'Your Route could not be recalculated because the confirmed facts conflict. Your last valid Route is unchanged.',
-        },
-        { status: 422 }
-      );
+      console.error('Route engine rejected the confirmed Fact set:', error.message);
+      return apiError({
+        status: 422,
+        code: 'INVALID_ROUTE_INPUT',
+        message:
+          'Your Route could not be recalculated because the Confirmed Facts conflict. Your last valid Route is unchanged.',
+        correlationId: correlation,
+      });
     }
     console.error('GET /api/route failed:', error);
-    return NextResponse.json(
-      { success: false, error: 'The Route could not be loaded. Please try again.' },
-      { status: 500 }
-    );
+    return apiError({
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: 'The Route could not be loaded. Please try again.',
+      retryable: true,
+      correlationId: correlation,
+    });
   }
 }

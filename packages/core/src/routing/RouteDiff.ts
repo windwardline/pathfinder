@@ -10,6 +10,11 @@ export interface MovedStep extends RouteStepRef {
   toRank: number;
 }
 
+export interface DeadlineChange extends RouteStepRef {
+  previousDeadline?: string;
+  newDeadline?: string;
+}
+
 /**
  * Structured Route Difference between two Route Versions. Powers the Reroute
  * explanation: what changed, what moved, what became blocked, what became
@@ -25,6 +30,7 @@ export interface RouteDifference {
   newlyBlocked: RouteStepRef[];
   completed: RouteStepRef[];
   moved: MovedStep[];
+  deadlineChanges: DeadlineChange[];
   isMeaningful: boolean;
 }
 
@@ -48,15 +54,25 @@ export function computeRouteDifference(
   const newlyAvailable: RouteStepRef[] = next.steps
     .filter(s => !prevMap.has(s.actionId) && ACTIONABLE.has(s.status))
     .map(ref);
-  const newlyBlocked: RouteStepRef[] = [];
+  const newlyBlocked: RouteStepRef[] = next.steps
+    .filter(step => !prevMap.has(step.actionId) && step.status === RouteStepStatus.BLOCKED)
+    .map(ref);
   const completed: RouteStepRef[] = [];
   const moved: MovedStep[] = [];
+  const deadlineChanges: DeadlineChange[] = [];
 
   for (const nextStep of next.steps) {
     const prevStep = prevMap.get(nextStep.actionId);
     if (!prevStep) continue;
 
     const statusChanged = prevStep.status !== nextStep.status;
+    if (prevStep.deadline !== nextStep.deadline) {
+      deadlineChanges.push({
+        ...ref(nextStep),
+        previousDeadline: prevStep.deadline,
+        newDeadline: nextStep.deadline,
+      });
+    }
     if (statusChanged && nextStep.status === RouteStepStatus.COMPLETED) {
       completed.push(ref(nextStep));
     } else if (
@@ -87,7 +103,8 @@ export function computeRouteDifference(
     newlyAvailable.length > 0 ||
     newlyBlocked.length > 0 ||
     completed.length > 0 ||
-    moved.length > 0;
+    moved.length > 0 ||
+    deadlineChanges.length > 0;
 
   return {
     focusActionChanged,
@@ -99,6 +116,7 @@ export function computeRouteDifference(
     newlyBlocked,
     completed,
     moved,
+    deadlineChanges,
     isMeaningful,
   };
 }

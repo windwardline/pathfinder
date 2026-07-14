@@ -3,7 +3,7 @@
 
 export type StepStatus = 'FOCUS' | 'UPCOMING' | 'BLOCKED' | 'COMPLETED';
 export type RouteStatus = 'ACTIVE' | 'BLOCKED' | 'COMPLETED' | 'EMPTY';
-export type FactStatus = 'PROPOSED' | 'CONFIRMED' | 'REJECTED' | 'SUPERSEDED';
+export type FactStatus = 'PROPOSED' | 'CONFIRMED' | 'REJECTED' | 'SUPERSEDED' | 'EXPIRED';
 
 export interface RouteStep {
   actionId: string;
@@ -21,6 +21,8 @@ export interface RouteStep {
     sourceText?: string;
     derivedFromFactId?: string;
   }>;
+  deadline?: string;
+  mandatoryObligation?: boolean;
 }
 
 export interface Route {
@@ -51,6 +53,9 @@ export interface RouteDifference {
   newlyBlocked: StepRef[];
   completed: StepRef[];
   moved: Array<StepRef & { fromRank: number; toRank: number }>;
+  deadlineChanges: Array<
+    StepRef & { previousDeadline?: string; newDeadline?: string }
+  >;
   isMeaningful: boolean;
 }
 
@@ -79,6 +84,9 @@ export interface FactRecord {
   payload: FactPayload | null;
   createdAt: string;
   updatedAt: string;
+  supersedesFactId?: string | null;
+  supersededByFactId?: string | null;
+  expiresAt?: string | null;
   provenance?: Array<{ source: string; confidence: number | null; createdAt: string }>;
 }
 
@@ -122,7 +130,7 @@ export const api = {
   extract: (text: string) =>
     request<{ facts: FactRecord[] }>('/api/ai/extract', {
       method: 'POST',
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, idempotencyKey: crypto.randomUUID() }),
     }),
   proposeAction: (title: string, description: string) =>
     request<{ fact: FactRecord }>('/api/facts', {
@@ -131,22 +139,79 @@ export const api = {
         action: 'propose',
         payload: { key: 'ACTION', value: { title, description, status: 'OPEN' } },
         provenance: { source: 'user_input' },
+        idempotencyKey: crypto.randomUUID(),
       }),
     }),
   confirmFact: (factId: string) =>
     request<{ fact: FactRecord; reroute: RerouteRecord | null }>('/api/facts', {
       method: 'POST',
-      body: JSON.stringify({ action: 'confirm', factId }),
+      body: JSON.stringify({
+        action: 'confirm',
+        factId,
+        confirmationMethod: 'USER_REVIEW',
+        idempotencyKey: crypto.randomUUID(),
+      }),
     }),
   rejectFact: (factId: string) =>
     request<{ fact: FactRecord }>('/api/facts', {
       method: 'POST',
-      body: JSON.stringify({ action: 'reject', factId }),
+      body: JSON.stringify({
+        action: 'reject',
+        factId,
+        reasonCode: 'USER_REJECTED',
+        idempotencyKey: crypto.randomUUID(),
+      }),
     }),
   completeAction: (actionId: string) =>
     request<{ factId: string; reroute: RerouteRecord | null }>('/api/actions/complete', {
       method: 'POST',
-      body: JSON.stringify({ actionId }),
+      body: JSON.stringify({ actionId, idempotencyKey: crypto.randomUUID() }),
     }),
   seedDemo: () => request<{ seeded: number }>('/api/demo/seed', { method: 'POST' }),
+  supersedeFact: (
+    factId: string,
+    replacementPayload: FactPayload,
+    reasonCode = 'USER_CORRECTION'
+  ) =>
+    request<{ fact: FactRecord; reroute: null }>('/api/facts', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'supersede',
+        factId,
+        replacementPayload,
+        provenance: { source: 'user_correction' },
+        reasonCode,
+        idempotencyKey: crypto.randomUUID(),
+      }),
+    }),
+  expireFact: (factId: string) =>
+    request<{ fact: FactRecord; reroute: RerouteRecord | null }>('/api/facts', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'expire',
+        factId,
+        reasonCode: 'NO_LONGER_CURRENT',
+        idempotencyKey: crypto.randomUUID(),
+      }),
+    }),
+  exportData: async () => {
+    const res = await fetch('/api/account/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmation: true }),
+    });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      throw new ApiError(data?.error || 'The export could not be created.', res.status);
+    }
+    return res.blob();
+  },
+  deleteAccount: () =>
+    request<{ status: 'DELETED'; completion_status: 'COMPLETE' }>(
+      '/api/account/delete',
+      {
+        method: 'POST',
+        body: JSON.stringify({ confirmation: 'DELETE MY ACCOUNT' }),
+      }
+    ),
 };

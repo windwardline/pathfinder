@@ -8,6 +8,7 @@ import {
   RouteStepStatus,
   RouteStatus,
   computeRouteDifference,
+  FactLifecycle,
 } from '../src/index';
 
 function actionFact(
@@ -38,6 +39,15 @@ function dependencyFact(id: string, sourceId: string, targetId: string, type: 'B
   return {
     id,
     payload: { key: 'DEPENDENCY', value: { sourceId, targetId, type } },
+    status: FactStatus.Confirmed,
+    provenance: { source: 'test_fixture' },
+  } as Fact;
+}
+
+function domainFact(id: string, key: string, value: unknown): Fact {
+  return {
+    id,
+    payload: { key, value },
     status: FactStatus.Confirmed,
     provenance: { source: 'test_fixture' },
   } as Fact;
@@ -222,6 +232,163 @@ describe('RouteEngine - Golden Fixtures', () => {
     expect(after.steps.find(s => s.actionId === 'f-housing')!.status).toBe(RouteStepStatus.UPCOMING);
   });
 
+  it('GF-002: identification completion makes all three dependent Actions available', () => {
+    const facts = [
+      actionFact('f-id', 'Obtain a state identification card'),
+      actionFact('f-work', 'Complete employment onboarding'),
+      actionFact('f-home', 'Submit the housing application'),
+      actionFact('f-bank', 'Open a checking account'),
+      dependencyFact('d1', 'f-id', 'f-work'),
+      dependencyFact('d2', 'f-id', 'f-home'),
+      dependencyFact('d3', 'f-id', 'f-bank'),
+    ];
+    const before = buildRoute(facts);
+    const after = buildRoute(
+      facts.map(f =>
+        f.id === 'f-id'
+          ? actionFact('f-id', 'Obtain a state identification card', 'COMPLETED')
+          : f
+      )
+    );
+
+    expect(computeRouteDifference(before, after).newlyAvailable.map(s => s.actionId).sort())
+      .toEqual(['f-bank', 'f-home', 'f-work']);
+  });
+
+  it('GF-003: transportation loss produces a meaningful deterministic Reroute', () => {
+    const before = buildRoute([
+      actionFact('f-work', 'Travel to employment onboarding'),
+      actionFact('f-call', 'Call your supervision officer'),
+    ]);
+    const after = buildRoute([
+      actionFact('f-transport', 'Restore transportation access'),
+      actionFact('f-work', 'Travel to employment onboarding'),
+      actionFact('f-call', 'Call your supervision officer'),
+      dependencyFact('d-transport', 'f-transport', 'f-work'),
+    ]);
+    const difference = computeRouteDifference(before, after);
+
+    expect(after.focusActionId).toBe('f-transport');
+    expect(difference.newlyBlocked.map(s => s.actionId)).toContain('f-work');
+    expect(difference.isMeaningful).toBe(true);
+  });
+
+  it('GF-004: a housing blocker keeps the affected Action blocked with an explanation', () => {
+    const route = buildRoute([
+      actionFact('f-resolve', 'Request a housing denial review'),
+      actionFact('f-home', 'Complete the housing application'),
+      dependencyFact('d-home', 'f-resolve', 'f-home'),
+    ]);
+    const housing = route.steps.find(s => s.actionId === 'f-home')!;
+
+    expect(housing.status).toBe(RouteStepStatus.BLOCKED);
+    expect(housing.reasonCodes).toContain('BLOCKED_BY_DEPENDENCY');
+    expect(housing.explanation).toContain('Request a housing denial review');
+  });
+
+  it('GF-005: a mandatory supervision conflict outranks a lower-effort Action', () => {
+    const route = buildRoute([
+      actionFact('f-shift', 'Resolve the work schedule conflict', 'OPEN', 'desc', {
+        mandatoryObligation: true,
+        conflictAvoidance: 10,
+        effortCost: 10,
+      }),
+      actionFact('f-optional', 'Complete an optional worksheet', 'OPEN', 'desc', {
+        effortCost: 1,
+      }),
+    ]);
+
+    expect(route.focusActionId).toBe('f-shift');
+    expect(route.steps[0].reasonCodes).toContain('MANDATORY_OBLIGATION');
+    expect(route.steps[0].reasonCodes).toContain('CONFLICT_AVOIDANCE');
+  });
+
+  it('blocks an Action when an active confirmed Constraint makes it infeasible', () => {
+    const route = buildRoute([
+      actionFact('f-work', 'Travel to employment onboarding'),
+      domainFact('f-constraint', 'CONSTRAINT', {
+        constraintType: 'TRANSPORTATION',
+        description: 'Transportation is not currently available.',
+        status: 'ACTIVE',
+        targetActionIds: ['f-work'],
+      }),
+    ]);
+
+    expect(route.status).toBe(RouteStatus.BLOCKED);
+    expect(route.focusActionId).toBeUndefined();
+    expect(route.steps[0].status).toBe(RouteStepStatus.BLOCKED);
+    expect(route.steps[0].blockedBy).toContain('Transportation is not currently available.');
+  });
+
+  it('derives Deadline urgency from a confirmed Deadline Fact', () => {
+    const route = buildRoute([
+      actionFact('f-optional', 'Attend optional orientation'),
+      actionFact('f-deadline-action', 'Submit time-sensitive paperwork'),
+      domainFact('f-deadline', 'DEADLINE', {
+        title: 'Paperwork deadline',
+        dueAt: '2026-07-15T12:00:00.000Z',
+        severity: 'CRITICAL',
+        targetActionId: 'f-deadline-action',
+      }),
+    ]);
+
+    expect(route.focusActionId).toBe('f-deadline-action');
+    expect(route.steps[0].reasonCodes).toContain('CRITICAL_DEADLINE');
+  });
+
+  it('turns an unsatisfied hard Requirement with a resolution Action into an ordering dependency', () => {
+    const route = buildRoute([
+      actionFact('f-resolve', 'Obtain the required document'),
+      actionFact('f-submit', 'Submit the application'),
+      domainFact('f-requirement', 'REQUIREMENT', {
+        description: 'A current identity document is required.',
+        status: 'UNSATISFIED',
+        hardness: 'HARD',
+        targetActionId: 'f-submit',
+        resolutionActionId: 'f-resolve',
+      }),
+    ]);
+
+    expect(route.focusActionId).toBe('f-resolve');
+    expect(route.steps.find(step => step.actionId === 'f-submit')?.status)
+      .toBe(RouteStepStatus.BLOCKED);
+  });
+
+  it('GF-006: an updated critical Deadline deterministically reprioritizes the Action', () => {
+    const before = buildRoute([
+      actionFact('f-a', 'Submit the application'),
+      actionFact('f-b', 'Attend orientation'),
+    ]);
+    const after = buildRoute([
+      actionFact('f-a', 'Submit the application', 'OPEN', 'desc', {
+        criticalDeadline: true,
+        deadline: '2026-07-15T12:00:00.000Z',
+      }),
+      actionFact('f-b', 'Attend orientation'),
+    ]);
+
+    expect(before.focusActionId).toBe('f-b');
+    expect(after.focusActionId).toBe('f-a');
+    expect(computeRouteDifference(before, after).focusActionChanged).toBe(true);
+    expect(computeRouteDifference(before, after).deadlineChanges).toEqual([
+      {
+        actionId: 'f-a',
+        title: 'Submit the application',
+        previousDeadline: undefined,
+        newDeadline: '2026-07-15T12:00:00.000Z',
+      },
+    ]);
+  });
+
+  it('GF-008: a Proposed Fact is rejected before it can enter routing', () => {
+    const proposed = {
+      ...actionFact('f-proposed', 'Unconfirmed Action'),
+      status: FactStatus.Proposed,
+    };
+    expect(() => buildRoute([actionFact('f-confirmed', 'Confirmed Action'), proposed]))
+      .toThrow(/non-confirmed/i);
+  });
+
   it('GF-010: all actions completed yields a COMPLETED Route with no focus', () => {
     const facts = [
       actionFact('f-a', 'First step', 'COMPLETED'),
@@ -242,6 +409,24 @@ describe('RouteEngine - Golden Fixtures', () => {
     const route = buildRoute([actionFact('f-a', 'Attend orientation')]);
     const focus = route.steps[0];
     expect(focus.reasonCodes).toContain('ONLY_ELIGIBLE_ACTION');
+  });
+});
+
+describe('FactLifecycle', () => {
+  it('supersedes a Confirmed Fact while preserving the replacement link', () => {
+    const current = actionFact('f-old', 'Old Action');
+    const replacement = actionFact('f-new', 'Corrected Action');
+
+    const superseded = FactLifecycle.supersede(current, replacement);
+    expect(superseded.status).toBe(FactStatus.Superseded);
+    expect(superseded.supersededByFactId).toBe('f-new');
+  });
+
+  it('expires only a Confirmed Fact', () => {
+    const current = actionFact('f-current', 'Time-limited Action');
+    expect(FactLifecycle.expire(current).status).toBe(FactStatus.Expired);
+    expect(() => FactLifecycle.expire({ ...current, status: FactStatus.Proposed }))
+      .toThrow(/confirmed/i);
   });
 });
 

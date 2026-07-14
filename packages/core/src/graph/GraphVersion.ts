@@ -16,6 +16,7 @@ export class GraphVersion {
   public readonly dependencies: Dependency[];
   public readonly sourceFacts: string[];
   public readonly createdAt: Date;
+  public readonly actionBlockers = new Map<string, string[]>();
 
   constructor(id: string, facts: Fact[]) {
     // 1. Ensure only Confirmed facts are present (ADR-005)
@@ -24,8 +25,9 @@ export class GraphVersion {
       throw new GraphVersionError(`Cannot build graph with non-confirmed facts: ${invalidFacts.map(f => f.id).join(', ')}`);
     }
 
-    const routeFacts = facts.filter(
-      fact => fact.payload?.key === 'ACTION' || fact.payload?.key === 'DEPENDENCY'
+    const routeFacts = facts.filter(fact =>
+      ['ACTION', 'DEPENDENCY', 'GOAL', 'REQUIREMENT', 'OBLIGATION', 'CONSTRAINT', 'DEADLINE', 'BLOCKER']
+        .includes(fact.payload?.key)
     );
     const missingProvenance = routeFacts.filter(
       fact => !fact.provenance?.source && !fact.provenanceHistory?.some(item => item.source)
@@ -53,16 +55,16 @@ export class GraphVersion {
     this.dependencies = [];
 
     this.deriveFromFacts(facts);
+    this.applyDomainFacts(facts);
 
     // 3. Validate references before normalizing. Invalid dependencies must fail
     // publication; silently dropping one can make a blocked Action eligible.
-    const actionIds = new Set(
-      this.nodes.filter(n => n.type === 'ACTION').map(n => n.id)
-    );
+    const actionIds = new Set(this.nodes.filter(n => n.type === 'ACTION').map(n => n.id));
+    const nodeIds = new Set(this.nodes.map(node => node.id));
     for (const dependency of this.dependencies) {
-      if (!actionIds.has(dependency.sourceId) || !actionIds.has(dependency.targetId)) {
+      if (!nodeIds.has(dependency.sourceId) || !nodeIds.has(dependency.targetId)) {
         throw new GraphVersionError(
-          `Dependency references an unknown Action: ${dependency.sourceId} -> ${dependency.targetId}`
+          `Dependency references an unknown Action or domain node: ${dependency.sourceId} -> ${dependency.targetId}`
         );
       }
       if (dependency.sourceId === dependency.targetId) {
@@ -100,6 +102,7 @@ export class GraphVersion {
           createdAt: fact.createdAt,
           provenance:
             fact.provenanceHistory ?? (fact.provenance ? [fact.provenance] : []),
+          goalId: payload.value.goalId,
           routing: payload.value.routing,
         } as Action);
       } else if (payload.key === 'DEPENDENCY') {
@@ -117,8 +120,131 @@ export class GraphVersion {
           targetId: payload.value.targetId,
           type: payload.value.type
         });
+      } else if (
+        ['GOAL', 'REQUIREMENT', 'OBLIGATION', 'CONSTRAINT', 'DEADLINE', 'BLOCKER']
+          .includes(payload.key)
+      ) {
+        if (!payload.value || typeof payload.value !== 'object') {
+          throw new GraphVersionError(`Domain Fact has an invalid payload: ${fact.id}`);
+        }
+        this.nodes.push({
+          id: fact.id,
+          type: payload.key,
+          ...payload.value,
+        } as GraphNode);
       }
       // Additional node derivatives can be mapped here deterministically
+    }
+  }
+
+  private applyDomainFacts(facts: Fact[]) {
+    const actions = new Map(
+      this.nodes
+        .filter((node): node is Action => node.type === 'ACTION')
+        .map(action => [action.id, action])
+    );
+    const goals = new Map(
+      facts
+        .filter(fact => fact.payload.key === 'GOAL')
+        .map(fact => [fact.id, fact.payload.value])
+    );
+
+    const requireAction = (id: string, factId: string) => {
+      const action = actions.get(id);
+      if (!action) {
+        throw new GraphVersionError(`Domain Fact ${factId} references an unknown Action: ${id}`);
+      }
+      return action;
+    };
+    const addBlocker = (actionId: string, description: string) => {
+      this.actionBlockers.set(actionId, [
+        ...(this.actionBlockers.get(actionId) ?? []),
+        description,
+      ]);
+    };
+    const addResolution = (
+      factId: string,
+      targetActionId: string,
+      resolutionActionId: string | undefined,
+      description: string
+    ) => {
+      requireAction(targetActionId, factId);
+      if (resolutionActionId) {
+        requireAction(resolutionActionId, factId);
+        this.dependencies.push({
+          sourceId: resolutionActionId,
+          targetId: targetActionId,
+          type: 'BLOCKS',
+        });
+      } else {
+        addBlocker(targetActionId, description);
+      }
+    };
+
+    for (const action of actions.values()) {
+      if (!action.goalId) continue;
+      const goal = goals.get(action.goalId);
+      if (!goal || goal.status !== 'ACTIVE') continue;
+      const priority = Number(goal.priority);
+      action.routing = {
+        ...action.routing,
+        goalAlignment: Number.isFinite(priority) ? priority : 0,
+        userPriority: Number.isFinite(priority) ? priority : 0,
+      };
+    }
+
+    for (const fact of facts) {
+      const value = fact.payload.value;
+      if (!value || typeof value !== 'object') continue;
+
+      if (fact.payload.key === 'REQUIREMENT') {
+        if (
+          value.hardness === 'HARD' &&
+          !['SATISFIED', 'WAIVED'].includes(value.status)
+        ) {
+          addResolution(
+            fact.id,
+            value.targetActionId,
+            value.resolutionActionId,
+            value.description
+          );
+        }
+      } else if (fact.payload.key === 'CONSTRAINT' && value.status === 'ACTIVE') {
+        for (const targetId of value.targetActionIds ?? []) {
+          addResolution(
+            fact.id,
+            targetId,
+            value.resolutionActionId,
+            value.description
+          );
+        }
+      } else if (fact.payload.key === 'BLOCKER' && value.active === true) {
+        addResolution(
+          fact.id,
+          value.targetActionId,
+          value.resolutionActionId,
+          value.description
+        );
+      } else if (fact.payload.key === 'DEADLINE') {
+        const action = requireAction(value.targetActionId, fact.id);
+        action.routing = {
+          ...action.routing,
+          criticalDeadline: value.severity === 'CRITICAL',
+          deadline: value.dueAt,
+        };
+      } else if (fact.payload.key === 'OBLIGATION' && value.status === 'ACTIVE') {
+        if (value.resolutionActionId) {
+          const resolution = requireAction(value.resolutionActionId, fact.id);
+          resolution.routing = {
+            ...resolution.routing,
+            mandatoryObligation: true,
+            conflictAvoidance: Math.max(resolution.routing?.conflictAvoidance ?? 0, 1),
+          };
+        }
+        for (const targetId of value.conflictActionIds ?? []) {
+          addResolution(fact.id, targetId, value.resolutionActionId, value.title);
+        }
+      }
     }
   }
 }

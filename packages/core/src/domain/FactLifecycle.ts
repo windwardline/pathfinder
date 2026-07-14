@@ -57,5 +57,19 @@ export const FactLifecycle = {
       supersededByFactId: newFact.id,
       updatedAt: new Date()
     };
+  },
+
+  expire(fact: Fact): Fact {
+    if (fact.status !== FactStatus.Confirmed) {
+      throw new FactLifecycleError(
+        `Only Confirmed facts can expire. Current status: ${fact.status}`
+      );
+    }
+    return {
+      ...fact,
+      status: FactStatus.Expired,
+      expiresAt: new Date(),
+      updatedAt: new Date()
+    };
   }
 };

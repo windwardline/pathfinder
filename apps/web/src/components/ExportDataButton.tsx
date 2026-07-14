@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { Loader2, Download } from 'lucide-react';
 import { api } from '@/lib/client-api';
 
-/** Exports the user's facts, current Route, and Route History as JSON. */
+/** Requests the authenticated server export after an explicit second step. */
 export function ExportDataButton() {
+  const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -13,32 +14,14 @@ export function ExportDataButton() {
     setBusy(true);
     setError(null);
     try {
-      const [factsRes, routeRes, historyRes] = await Promise.all([
-        api.getFacts(),
-        api.getRoute(),
-        api.getHistory(),
-      ]);
-      const blob = new Blob(
-        [
-          JSON.stringify(
-            {
-              exportedAt: new Date().toISOString(),
-              facts: factsRes.facts,
-              route: routeRes.route,
-              history: historyRes.history,
-            },
-            null,
-            2
-          ),
-        ],
-        { type: 'application/json' }
-      );
+      const blob = await api.exportData();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'pathfinder-export.json';
-      a.click();
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'pathfinder-export.json';
+      anchor.click();
       URL.revokeObjectURL(url);
+      setConfirming(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'The export could not be created.');
     } finally {
@@ -48,18 +31,43 @@ export function ExportDataButton() {
 
   return (
     <div>
-      <button
-        onClick={exportData}
-        disabled={busy}
-        className="inline-flex items-center gap-2 rounded-lg border border-hairline px-4 py-2.5 text-sm text-ink transition-colors hover:bg-raised disabled:opacity-60"
-      >
-        {busy ? (
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-        ) : (
+      {!confirming ? (
+        <button
+          onClick={() => setConfirming(true)}
+          className="inline-flex items-center gap-2 rounded-lg border border-hairline px-4 py-2.5 text-sm text-ink transition-colors hover:bg-raised"
+        >
           <Download className="h-4 w-4" aria-hidden="true" />
-        )}
-        Export my data
-      </button>
+          Export my data
+        </button>
+      ) : (
+        <div className="rounded-xl border border-hairline bg-raised p-4">
+          <p className="text-sm leading-relaxed text-ink-soft">
+            This creates a JSON file containing your account, Facts, Provenance, current Route,
+            and Route History.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={exportData}
+              disabled={busy}
+              className="inline-flex items-center gap-2 rounded-lg bg-spruce px-4 py-2.5 text-sm font-medium text-paper disabled:opacity-60"
+            >
+              {busy ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Download className="h-4 w-4" aria-hidden="true" />
+              )}
+              Confirm export
+            </button>
+            <button
+              onClick={() => setConfirming(false)}
+              disabled={busy}
+              className="rounded-lg px-4 py-2.5 text-sm text-ink-soft hover:bg-surface disabled:opacity-60"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       {error && (
         <p role="alert" className="mt-2 text-sm text-brick">
           {error}

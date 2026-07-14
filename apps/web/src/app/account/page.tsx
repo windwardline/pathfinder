@@ -2,6 +2,7 @@ import { auth, signOut } from '@/auth';
 import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { ExportDataButton } from '@/components/ExportDataButton';
+import { DeleteAccountSection } from '@/components/DeleteAccountSection';
 
 export const metadata = { title: 'Account' };
 
@@ -63,6 +64,8 @@ export default async function AccountPage() {
             <ExportDataButton />
           </div>
         </section>
+
+        <DeleteAccountSection />
       </div>
     </AppShell>
   );

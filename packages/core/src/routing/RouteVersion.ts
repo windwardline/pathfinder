@@ -1,3 +1,8 @@
+import type { Provenance } from '../domain/Provenance';
+
+export const ROUTE_ENGINE_VERSION = 'release-1.0';
+export const ROUTE_RULE_SET_VERSION = 'release-1.0';
+
 export enum RouteStepStatus {
   FOCUS = 'FOCUS',
   UPCOMING = 'UPCOMING',
@@ -28,6 +33,10 @@ export interface RouteStep {
   blockedBy: string[];
   /** Traceable sources supporting the Action itself. */
   provenance: Provenance[];
+  /** Confirmed Deadline context used by the deterministic ranking tuple. */
+  deadline?: string;
+  /** Whether a confirmed mandatory Obligation influenced placement. */
+  mandatoryObligation?: boolean;
 }
 
 export class RouteVersion {
@@ -53,4 +62,3 @@ export class RouteVersion {
     this.createdAt = new Date();
   }
 }
-import type { Provenance } from '../domain/Provenance';

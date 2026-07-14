@@ -27,7 +27,7 @@ export function RoutePageView() {
   }
   if (!data) return null;
 
-  const { route } = data;
+  const { route, proposedCount } = data;
   const openCount = route.steps.filter(s => s.status !== 'COMPLETED').length;
   const completedCount = route.steps.length - openCount;
 
@@ -55,7 +55,10 @@ export function RoutePageView() {
       )}
 
       {route.status === 'EMPTY' ? (
-        <EmptyState kind="no-facts" onSeeded={refresh} />
+        <EmptyState
+          kind={proposedCount > 0 ? 'no-confirmed-facts' : 'no-facts'}
+          onSeeded={refresh}
+        />
       ) : (
         <RouteStepList steps={route.steps} />
       )}

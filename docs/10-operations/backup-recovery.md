@@ -22,11 +22,15 @@ The objective is to preserve user trust, Route reproducibility, Provenance integ
 
 ### Recovery Time Objective (RTO)
 
-The acceptable time to restore critical Route generation services shall be defined before production deployment and validated through recovery exercises.
+The Release 1 production RTO is four hours. A recovery exercise must verify
+that application availability, ownership boundaries, Route generation, and
+Reroute generation can be restored inside that window.
 
 ### Recovery Point Objective (RPO)
 
-The maximum acceptable data loss window shall be defined before production deployment and validated against the backup schedule.
+The Release 1 production RPO is 24 hours. The database backup schedule must
+provide at least one encrypted recovery point per 24 hours within the rolling
+seven-day retention window.
 
 ## Protected Assets
 
