@@ -83,7 +83,10 @@ def compact(text: str) -> str:
 def markdown_files() -> list[Path]:
     files: list[Path] = []
     for path in ROOT.rglob("*.md"):
-        if ".git" not in path.parts:
+        # Installed or generated dependencies are not part of Pathfinder's
+        # documentation corpus and may contain their own placeholders or
+        # package-relative links.
+        if not {".git", "node_modules", ".next"}.intersection(path.parts):
             files.append(path)
     return sorted(files)
 
