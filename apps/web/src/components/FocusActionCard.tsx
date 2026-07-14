@@ -64,6 +64,25 @@ export function FocusActionCard({
               ))}
             </div>
           )}
+          {step.deadline && (
+            <p className="mt-3 text-xs leading-relaxed text-ink-soft">
+              <span className="font-medium">Confirmed Deadline:</span>{' '}
+              <time dateTime={step.deadline}>
+                {new Date(step.deadline).toLocaleString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+              </time>
+            </p>
+          )}
+          {step.mandatoryObligation && (
+            <p className="mt-2 text-xs text-ink-soft">
+              A Confirmed mandatory Obligation influenced this placement.
+            </p>
+          )}
           {provenanceSources.length > 0 && (
             <p className="mt-3 text-xs leading-relaxed text-ink-soft">
               <span className="font-medium">Supported by:</span>{' '}

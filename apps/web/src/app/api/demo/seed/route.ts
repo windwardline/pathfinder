@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   FactStatus,
+  RerouteReason,
   db,
   facts as factsTable,
   graphVersions,
@@ -9,7 +10,12 @@ import {
 } from '@pathfinder/core';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/auth';
-import { recordProvenance } from '@/lib/route-service';
+import {
+  buildRoute,
+  loadConfirmedFacts,
+  recordProvenance,
+  recordReroute,
+} from '@/lib/route-service';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 interface SeedAction {
@@ -101,6 +107,8 @@ export async function POST() {
       await tx.delete(graphVersions).where(eq(graphVersions.userId, userId));
       await tx.delete(factsTable).where(eq(factsTable.userId, userId));
 
+      const seededAt = new Date();
+
       const idByRef = new Map<string, string>();
       for (const action of SEED_ACTIONS) {
         const factId = crypto.randomUUID();
@@ -108,12 +116,15 @@ export async function POST() {
         await tx.insert(factsTable).values({
           id: factId,
           userId,
+          factType: 'ACTION',
           factText: JSON.stringify({
             key: 'ACTION',
             value: { title: action.title, description: action.description, status: action.status },
             sourceText: action.sourceText,
           }),
           status: FactStatus.Confirmed,
+          confirmedAt: seededAt,
+          confirmedBy: 'seed-demonstration',
         });
         await recordProvenance(factId, 'seed_demonstration', 100, undefined, tx);
       }
@@ -123,6 +134,7 @@ export async function POST() {
         await tx.insert(factsTable).values({
           id: factId,
           userId,
+          factType: 'DEPENDENCY',
           factText: JSON.stringify({
             key: 'DEPENDENCY',
             value: {
@@ -132,9 +144,23 @@ export async function POST() {
             },
           }),
           status: FactStatus.Confirmed,
+          confirmedAt: seededAt,
+          confirmedBy: 'seed-demonstration',
         });
         await recordProvenance(factId, 'seed_demonstration', 100, undefined, tx);
       }
+
+      const seededFacts = await loadConfirmedFacts(userId, tx);
+      await recordReroute(
+        tx,
+        userId,
+        RerouteReason.FACT_CONFIRMED,
+        buildRoute([]),
+        buildRoute(seededFacts),
+        [],
+        seededFacts,
+        'seed-demonstration'
+      );
     });
 
     return NextResponse.json({ success: true, seeded: SEED_ACTIONS.length + SEED_DEPENDENCIES.length });

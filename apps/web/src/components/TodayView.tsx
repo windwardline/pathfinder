@@ -78,14 +78,20 @@ export function TodayView() {
           className="mb-6 flex items-center justify-between rounded-xl border border-amber/30 bg-amber-soft px-5 py-3.5 text-sm text-amber transition-opacity hover:opacity-90"
         >
           <span>
-            {proposedCount} Proposed {proposedCount === 1 ? 'Fact' : 'Facts'} awaiting your review.
+            {proposedCount} Proposed {proposedCount === 1 ? 'Fact' : 'Facts'}{' '}
+            awaiting your review.
             Proposed Facts don&apos;t affect your Route until you confirm them.
           </span>
           <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
         </Link>
       )}
 
-      {route.status === 'EMPTY' && <EmptyState kind="no-facts" onSeeded={refresh} />}
+      {route.status === 'EMPTY' && (
+        <EmptyState
+          kind={proposedCount > 0 ? 'no-confirmed-facts' : 'no-facts'}
+          onSeeded={refresh}
+        />
+      )}
       {route.status === 'COMPLETED' && <EmptyState kind="route-completed" />}
       {route.status === 'BLOCKED' && <EmptyState kind="route-blocked" />}
 

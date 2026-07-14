@@ -11,6 +11,7 @@ const REASON_LABELS: Record<string, string> = {
   ACTION_COMPLETED: 'You completed an Action',
   DEADLINE_CHANGED: 'A deadline changed',
   MANUAL_REFRESH: 'Your Route was refreshed',
+  FACT_EXPIRED: 'A Fact is no longer current',
 };
 
 /**
@@ -110,6 +111,11 @@ export function RerouteSummary({
           {difference.moved.length > 0 && (
             <DiffSection label="Moved">
               {difference.moved.map(m => `${m.title} (#${m.fromRank} → #${m.toRank})`).join(', ')}
+            </DiffSection>
+          )}
+          {difference.deadlineChanges?.length > 0 && (
+            <DiffSection label="Deadline changed" tone="amber">
+              {difference.deadlineChanges.map(change => change.title).join(', ')}
             </DiffSection>
           )}
           </dl>

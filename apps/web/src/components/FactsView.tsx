@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Sparkles, Plus, Check, X } from 'lucide-react';
+import { Loader2, Sparkles, Plus, Check, X, Pencil, CalendarX } from 'lucide-react';
 import { api, FactRecord, RerouteRecord } from '@/lib/client-api';
 import { StatusBadge } from './StatusBadge';
 import { RerouteSummary } from './RerouteSummary';
@@ -20,6 +20,9 @@ export function FactsView() {
   const [notice, setNotice] = useState<string | null>(null);
   const [reroute, setReroute] = useState<RerouteRecord | null>(null);
   const [busyFactId, setBusyFactId] = useState<string | null>(null);
+  const [correctingFactId, setCorrectingFactId] = useState<string | null>(null);
+  const [correctionTitle, setCorrectionTitle] = useState('');
+  const [correctionDescription, setCorrectionDescription] = useState('');
 
   const refresh = useCallback(async () => {
     try {
@@ -75,6 +78,52 @@ export function FactsView() {
     }
   };
 
+  const beginCorrection = (fact: FactRecord) => {
+    setCorrectingFactId(fact.id);
+    setCorrectionTitle(fact.payload?.value?.title ?? '');
+    setCorrectionDescription(fact.payload?.value?.description ?? '');
+    setNotice(null);
+  };
+
+  const submitCorrection = async (factId: string) => {
+    setBusyFactId(factId);
+    setNotice(null);
+    try {
+      await api.supersedeFact(factId, {
+        key: 'ACTION',
+        value: {
+          title: correctionTitle.trim(),
+          description: correctionDescription.trim(),
+          status: 'OPEN',
+        },
+      });
+      await refresh();
+      setCorrectingFactId(null);
+      setNotice(
+        'Your correction is a Proposed Fact. The current Confirmed Fact stays active until you confirm the correction.'
+      );
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'The correction could not be saved.');
+    } finally {
+      setBusyFactId(null);
+    }
+  };
+
+  const expire = async (factId: string) => {
+    setBusyFactId(factId);
+    setNotice(null);
+    try {
+      const result = await api.expireFact(factId);
+      await refresh();
+      if (result.reroute) setReroute(result.reroute);
+      else setNotice('Fact expired. Your Route is unchanged.');
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'The Fact could not be expired.');
+    } finally {
+      setBusyFactId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center" role="status" aria-label="Loading facts">
@@ -89,6 +138,9 @@ export function FactsView() {
   const actionFacts = (facts ?? []).filter(f => f.payload?.key === 'ACTION');
   const proposed = actionFacts.filter(f => f.status === 'PROPOSED');
   const confirmed = actionFacts.filter(f => f.status === 'CONFIRMED');
+  const inactive = actionFacts.filter(f =>
+    ['REJECTED', 'SUPERSEDED', 'EXPIRED'].includes(f.status)
+  );
 
   return (
     <div>
@@ -156,29 +208,113 @@ export function FactsView() {
               <li
                 key={fact.id}
                 className={cn(
-                  'flex items-center justify-between gap-4 rounded-lg border border-hairline bg-surface px-4 py-3',
+                  'rounded-lg border border-hairline bg-surface px-4 py-3',
                   fact.payload?.value?.status === 'COMPLETED' && 'opacity-60'
                 )}
               >
-                <span className="min-w-0">
-                  <span className="block truncate text-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm">
                     {fact.payload?.value?.title ?? 'Untitled fact'}
-                  </span>
-                  <span className="mt-0.5 block font-mono text-[11px] text-ink-faint">
+                    </span>
+                    <span className="mt-0.5 block font-mono text-[11px] text-ink-faint">
                     {(fact.provenance ?? [])
                       .map(p => p.source)
                       .filter((s, i, arr) => arr.indexOf(s) === i)
                       .join(' · ') || 'no provenance'}
+                    </span>
                   </span>
-                </span>
-                <StatusBadge
-                  status={fact.payload?.value?.status === 'COMPLETED' ? 'COMPLETED' : 'CONFIRMED'}
-                />
+                  <StatusBadge
+                    status={fact.payload?.value?.status === 'COMPLETED' ? 'COMPLETED' : 'CONFIRMED'}
+                  />
+                </div>
+                {fact.payload?.value?.status !== 'COMPLETED' && (
+                  <div className="mt-3 flex flex-wrap gap-2 border-t border-hairline pt-3">
+                    <button
+                      onClick={() => beginCorrection(fact)}
+                      disabled={busyFactId === fact.id}
+                      className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-ink-soft hover:bg-raised disabled:opacity-50"
+                    >
+                      <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                      Correct
+                    </button>
+                    <button
+                      onClick={() => expire(fact.id)}
+                      disabled={busyFactId === fact.id}
+                      className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-ink-soft hover:bg-raised disabled:opacity-50"
+                    >
+                      <CalendarX className="h-3.5 w-3.5" aria-hidden="true" />
+                      No longer current
+                    </button>
+                  </div>
+                )}
+                {correctingFactId === fact.id && (
+                  <div className="mt-3 rounded-lg bg-raised p-4">
+                    <p className="text-xs leading-relaxed text-ink-soft">
+                      Your correction will start as a Proposed Fact. The current version remains active until you confirm the replacement.
+                    </p>
+                    <label className="mt-3 block text-xs text-ink-soft" htmlFor={`correction-title-${fact.id}`}>
+                      Corrected Action
+                    </label>
+                    <input
+                      id={`correction-title-${fact.id}`}
+                      value={correctionTitle}
+                      onChange={event => setCorrectionTitle(event.target.value)}
+                      maxLength={120}
+                      className="mt-1 w-full rounded-lg border border-hairline bg-paper px-3 py-2 text-sm focus:border-spruce focus:outline-none"
+                    />
+                    <label className="mt-3 block text-xs text-ink-soft" htmlFor={`correction-description-${fact.id}`}>
+                      Helpful context
+                    </label>
+                    <input
+                      id={`correction-description-${fact.id}`}
+                      value={correctionDescription}
+                      onChange={event => setCorrectionDescription(event.target.value)}
+                      maxLength={500}
+                      className="mt-1 w-full rounded-lg border border-hairline bg-paper px-3 py-2 text-sm focus:border-spruce focus:outline-none"
+                    />
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => submitCorrection(fact.id)}
+                        disabled={busyFactId === fact.id || !correctionTitle.trim()}
+                        className="rounded-lg bg-spruce px-3 py-2 text-xs font-medium text-paper disabled:opacity-50"
+                      >
+                        Save Proposed correction
+                      </button>
+                      <button
+                        onClick={() => setCorrectingFactId(null)}
+                        disabled={busyFactId === fact.id}
+                        className="rounded-lg px-3 py-2 text-xs text-ink-soft hover:bg-surface"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
         )}
       </section>
+
+      {inactive.length > 0 && (
+        <section aria-labelledby="fact-history-heading" className="mt-12">
+          <h2 id="fact-history-heading" className="text-sm font-medium">Fact history</h2>
+          <p className="mt-1.5 text-xs text-ink-faint">
+            These records remain visible for traceability and do not affect your current Route.
+          </p>
+          <ul className="mt-4 space-y-2">
+            {inactive.map(fact => (
+              <li key={fact.id} className="flex items-center justify-between gap-4 rounded-lg bg-raised px-4 py-3 opacity-75">
+                <span className="truncate text-sm text-ink-soft">
+                  {fact.payload?.value?.title ?? 'Untitled Fact'}
+                </span>
+                <StatusBadge status={fact.status} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {reroute && <RerouteSummary reroute={reroute} onClose={() => setReroute(null)} />}
     </div>
@@ -204,6 +340,11 @@ function ProposedFactCard({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <StatusBadge status="PROPOSED" />
+          {fact.supersedesFactId && (
+            <span className="ml-2 text-[11px] font-medium uppercase tracking-wide text-ink-faint">
+              Correction
+            </span>
+          )}
           <h3 className="mt-2.5 font-serif text-lg leading-snug">
             {fact.payload?.value?.title ?? 'Untitled fact'}
           </h3>
@@ -288,19 +429,45 @@ function CaptureBox({ onCaptured }: { onCaptured: () => Promise<void> }) {
 
   return (
     <div className="rounded-2xl border border-hairline bg-surface p-6">
-      <div role="tablist" aria-label="How to add facts" className="flex gap-1 rounded-lg bg-raised p-1">
-        <TabButton active={mode === 'paste'} onClick={() => setMode('paste')}>
+      <div
+        role="tablist"
+        aria-label="How to add facts"
+        onKeyDown={event => {
+          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+          event.preventDefault();
+          const nextMode =
+            event.key === 'ArrowLeft' || event.key === 'Home' ? 'paste' : 'manual';
+          setMode(nextMode);
+          document.getElementById(`capture-tab-${nextMode}`)?.focus();
+        }}
+        className="flex gap-1 rounded-lg bg-raised p-1"
+      >
+        <TabButton
+          id="capture-tab-paste"
+          controls="capture-panel-paste"
+          active={mode === 'paste'}
+          onClick={() => setMode('paste')}
+        >
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
           Paste a document
         </TabButton>
-        <TabButton active={mode === 'manual'} onClick={() => setMode('manual')}>
+        <TabButton
+          id="capture-tab-manual"
+          controls="capture-panel-manual"
+          active={mode === 'manual'}
+          onClick={() => setMode('manual')}
+        >
           <Plus className="h-3.5 w-3.5" aria-hidden="true" />
           Add manually
         </TabButton>
       </div>
 
       {mode === 'paste' ? (
-        <>
+        <div
+          id="capture-panel-paste"
+          role="tabpanel"
+          aria-labelledby="capture-tab-paste"
+        >
           <label htmlFor="capture-text" className="mt-4 block text-sm text-ink-soft">
             Paste a job offer, housing letter, supervision schedule, or ID guidance. Pathfinder
             extracts the actions it finds as Proposed Facts for your review.
@@ -314,9 +481,14 @@ function CaptureBox({ onCaptured }: { onCaptured: () => Promise<void> }) {
             placeholder="Paste the document text here…"
             className="mt-3 w-full resize-none rounded-xl border border-hairline bg-paper px-4 py-3 text-sm leading-relaxed placeholder:text-ink-faint focus:border-spruce focus:outline-none"
           />
-        </>
+        </div>
       ) : (
-        <div className="mt-4 space-y-3">
+        <div
+          id="capture-panel-manual"
+          role="tabpanel"
+          aria-labelledby="capture-tab-manual"
+          className="mt-4 space-y-3"
+        >
           <div>
             <label htmlFor="manual-title" className="block text-sm text-ink-soft">
               What needs to happen?
@@ -385,18 +557,26 @@ function CaptureBox({ onCaptured }: { onCaptured: () => Promise<void> }) {
 }
 
 function TabButton({
+  id,
+  controls,
   active,
   onClick,
   children,
 }: {
+  id: string;
+  controls: string;
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
 }) {
   return (
     <button
+      type="button"
+      id={id}
       role="tab"
+      aria-controls={controls}
       aria-selected={active}
+      tabIndex={active ? 0 : -1}
       onClick={onClick}
       className={cn(
         'flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm transition-colors',

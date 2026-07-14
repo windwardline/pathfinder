@@ -1,6 +1,6 @@
 export interface GraphNode {
   id: string;
-  type: 'GOAL' | 'ACTION' | 'REQUIREMENT' | 'CONSTRAINT' | 'DEADLINE' | 'BLOCKER';
+  type: 'GOAL' | 'ACTION' | 'REQUIREMENT' | 'OBLIGATION' | 'CONSTRAINT' | 'DEADLINE' | 'BLOCKER' | 'UNLOCK';
 }
 
 export interface Goal extends GraphNode {
@@ -17,6 +17,7 @@ export interface Action extends GraphNode {
   status: 'OPEN' | 'COMPLETED' | 'BLOCKED';
   createdAt?: Date;
   provenance: Provenance[];
+  goalId?: string;
   routing?: {
     criticalDeadline?: boolean;
     deadline?: string;
@@ -52,9 +53,24 @@ export interface Blocker extends GraphNode {
   description: string;
 }
 
+export interface Obligation extends GraphNode {
+  type: 'OBLIGATION';
+  title: string;
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  startAt: Date;
+  endAt?: Date;
+}
+
+export interface Unlock extends GraphNode {
+  type: 'UNLOCK';
+  sourceActionId: string;
+  targetId: string;
+  unlockType: string;
+}
+
 export interface Dependency {
   sourceId: string;
   targetId: string;
-  type: 'BLOCKS' | 'REQUIRES' | 'CONSTRAINS' | 'COMPLETES';
+  type: 'REQUIRES' | 'BLOCKS' | 'UNLOCKS' | 'SUPPORTS' | 'CONFLICTS_WITH' | 'SATISFIES';
 }
 import type { Provenance } from '../domain/Provenance';

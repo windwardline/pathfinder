@@ -281,6 +281,23 @@ Environment-specific policy must define:
 
 Production deployment is blocked until these values are approved and documented.
 
+### Release 1 Production Policy
+
+The approved Release 1 production values are:
+
+| Data or operation | Production value |
+|---|---|
+| Raw document retention | Raw pasted document text is processed in memory and is not persisted as a document. Validated source excerpts of at most 1,000 characters may remain with the Fact until supersession, expiration, or account deletion. |
+| Operational log retention | Routine operational logs are retained for no more than 30 days. Minimum account-deletion receipts may be retained for up to 365 days. |
+| Backup retention | Encrypted database recovery points use a rolling seven-day maximum retention window with at least one recovery point per 24 hours. |
+| Inactive account retention | Release 1 does not automatically delete an inactive account. The authenticated user controls deletion; inactive-account policy is reviewed annually. |
+| Export package expiration | Exports are generated synchronously, streamed to the authenticated browser, and are not stored as server-side packages. The browser object URL is revoked after the download begins. |
+| Deletion propagation | Primary records and sessions are removed in one transaction. Provider backup copies expire within the seven-day backup window; a restored environment must reapply deletion state before use. |
+
+These values are Release 1 operational policy, not permission to retain data
+when the product no longer needs it. A provider with a shorter retention window
+may discard data earlier. Any longer window requires a documented approval.
+
 ## Data Minimization Review
 
 Before adding a field, the owner must answer:

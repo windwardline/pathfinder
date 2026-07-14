@@ -8,6 +8,8 @@ const STYLES: Record<string, { label: string; className: string }> = {
   PROPOSED: { label: 'Proposed Fact', className: 'bg-amber-soft text-amber' },
   CONFIRMED: { label: 'Confirmed Fact', className: 'bg-spruce-soft text-spruce-ink' },
   REJECTED: { label: 'Rejected', className: 'bg-raised text-ink-faint' },
+  SUPERSEDED: { label: 'Superseded', className: 'bg-raised text-ink-faint' },
+  EXPIRED: { label: 'Expired', className: 'bg-raised text-ink-faint' },
 };
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {

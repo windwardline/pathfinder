@@ -22,7 +22,7 @@ export function normalizeOrderingEdges(
   for (const dep of dependencies) {
     let fromId: string;
     let toId: string;
-    if (dep.type === 'BLOCKS') {
+    if (dep.type === 'BLOCKS' || dep.type === 'UNLOCKS') {
       fromId = dep.sourceId;
       toId = dep.targetId;
     } else if (dep.type === 'REQUIRES') {

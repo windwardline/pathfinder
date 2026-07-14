@@ -12,7 +12,7 @@ export function EmptyState({
   kind,
   onSeeded,
 }: {
-  kind: 'no-facts' | 'route-completed' | 'route-blocked';
+  kind: 'no-facts' | 'no-confirmed-facts' | 'route-completed' | 'route-blocked';
   onSeeded?: () => void;
 }) {
   const [seeding, setSeeding] = useState(false);
@@ -59,6 +59,22 @@ export function EmptyState({
               </button>
             </div>
             {seedError && <p className="mt-4 text-sm text-brick">{seedError}</p>}
+          </>
+        )}
+
+        {kind === 'no-confirmed-facts' && (
+          <>
+            <h2 className="font-serif text-2xl">Your Proposed Facts are ready for review</h2>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-ink-soft">
+              Your Route stays empty until you decide which Proposed Facts are accurate. Review
+              them first; only Confirmed Facts can shape what comes next.
+            </p>
+            <a
+              href="/facts"
+              className="mt-8 inline-block rounded-lg bg-spruce px-5 py-2.5 text-sm font-medium text-paper transition-opacity hover:opacity-90"
+            >
+              Review Proposed Facts
+            </a>
           </>
         )}
 

@@ -4,6 +4,7 @@ import { RouteDifference, computeRouteDifference } from '../routing/RouteDiff';
 export enum RerouteReason {
   FACT_CONFIRMED = 'FACT_CONFIRMED',
   FACT_SUPERSEDED = 'FACT_SUPERSEDED',
+  FACT_EXPIRED = 'FACT_EXPIRED',
   FACT_REJECTED = 'FACT_REJECTED',
   ACTION_COMPLETED = 'ACTION_COMPLETED',
   DEADLINE_CHANGED = 'DEADLINE_CHANGED',
@@ -45,6 +46,7 @@ function emptyBaselineDifference(next: RouteVersion): RouteDifference {
     newlyBlocked: [],
     completed: [],
     moved: [],
+    deadlineChanges: [],
     isMeaningful: next.steps.length > 0,
   };
 }

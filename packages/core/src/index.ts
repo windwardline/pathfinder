@@ -1,6 +1,7 @@
 export * from './domain/Fact';
 export * from './domain/Provenance';
 export * from './domain/FactLifecycle';
+export * from './domain/Plan';
 
 export * from './graph/types';
 export * from './graph/edges';

@@ -12,6 +12,7 @@ const REASON_LABELS: Record<string, string> = {
   ACTION_COMPLETED: 'Action completed',
   DEADLINE_CHANGED: 'Deadline changed',
   MANUAL_REFRESH: 'Route refreshed',
+  FACT_EXPIRED: 'Fact expired',
 };
 
 /**
@@ -135,6 +136,11 @@ export function HistoryView() {
                   )}
                   {entry.difference.removed.length > 0 && (
                     <li>Removed: {entry.difference.removed.map(s => s.title).join(', ')}</li>
+                  )}
+                  {entry.difference.deadlineChanges?.length > 0 && (
+                    <li>
+                      Deadline changed: {entry.difference.deadlineChanges.map(item => item.title).join(', ')}
+                    </li>
                   )}
                 </ul>
               ) : (

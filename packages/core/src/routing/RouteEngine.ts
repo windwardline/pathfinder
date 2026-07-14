@@ -108,14 +108,22 @@ export class RouteEngine {
       }
     }
 
-    const initiallyAvailable = new Set(openIds.filter(id => inDegree.get(id) === 0));
+    const initiallyAvailable = new Set(
+      openIds.filter(
+        id => inDegree.get(id) === 0 && !(graph.actionBlockers.get(id)?.length)
+      )
+    );
 
     // Deterministic total order over incomplete actions (Kahn + stable tie-break).
-    const queue = [...initiallyAvailable];
+    const queue = openIds.filter(id => inDegree.get(id) === 0);
     const order: string[] = [];
     const remaining = new Map(inDegree);
     while (queue.length > 0) {
-      queue.sort(compare);
+      queue.sort(
+        (a, b) =>
+          Number(initiallyAvailable.has(b)) - Number(initiallyAvailable.has(a)) ||
+          compare(a, b)
+      );
       const current = queue.shift()!;
       order.push(current);
       for (const child of openChildren.get(current) || []) {
@@ -134,10 +142,13 @@ export class RouteEngine {
         .map(childId => byId.get(childId)!.title);
 
     const openBlockers = (id: string) =>
-      (parentsOf.get(id) || [])
-        .filter(parentId => !isCompleted(parentId))
-        .sort(stableCompare)
-        .map(parentId => byId.get(parentId)!.title);
+      [
+        ...(parentsOf.get(id) || [])
+          .filter(parentId => !isCompleted(parentId))
+          .sort(stableCompare)
+          .map(parentId => byId.get(parentId)!.title),
+        ...(graph.actionBlockers.get(id) ?? []).sort((a, b) => a.localeCompare(b)),
+      ];
 
     const steps: RouteStep[] = [];
     let rank = 1;
@@ -191,8 +202,14 @@ export class RouteEngine {
         }
       } else {
         status = RouteStepStatus.BLOCKED;
-        reasonCodes.push('BLOCKED_BY_DEPENDENCY');
-        explanation = `This Action becomes available after you complete ${formatList(blockedBy)}.`;
+        reasonCodes.push(
+          graph.actionBlockers.get(id)?.length
+            ? 'BLOCKED_BY_CONSTRAINT'
+            : 'BLOCKED_BY_DEPENDENCY'
+        );
+        explanation = graph.actionBlockers.get(id)?.length
+          ? `This Action is currently blocked because ${formatList(graph.actionBlockers.get(id) ?? [])}.`
+          : `This Action becomes available after you complete ${formatList(blockedBy)}.`;
       }
 
       steps.push({
@@ -206,6 +223,8 @@ export class RouteEngine {
         unlocks,
         blockedBy,
         provenance: action.provenance,
+        deadline: action.routing?.deadline,
+        mandatoryObligation: action.routing?.mandatoryObligation,
       });
     }
 
@@ -228,6 +247,8 @@ export class RouteEngine {
         unlocks: openUnlocks(id),
         blockedBy: [],
         provenance: action.provenance,
+        deadline: action.routing?.deadline,
+        mandatoryObligation: action.routing?.mandatoryObligation,
       });
     }
 
