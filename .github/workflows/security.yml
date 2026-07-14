@@ -10,6 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
   pull-requests: read
   security-events: write
@@ -27,10 +28,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
+        with:
+          # Private repositories require GitHub Advanced Security to upload
+          # CodeQL results. Analysis still runs as a required CI gate.
+          upload: never
 
   secret-scan:
     name: Secret scan
