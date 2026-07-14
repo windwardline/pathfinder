@@ -25,6 +25,10 @@ export const metadata: Metadata = {
   },
   description:
     "Pathfinder builds your reentry route by showing what comes next, why it comes next, and what it unlocks.",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+  },
 };
 
 export const viewport: Viewport = {
