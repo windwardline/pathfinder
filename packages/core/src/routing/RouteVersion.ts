@@ -37,6 +37,8 @@ export interface RouteStep {
   deadline?: string;
   /** Whether a confirmed mandatory Obligation influenced placement. */
   mandatoryObligation?: boolean;
+  /** Confirmed Constraint references affecting this Action; not rendered as a graph. */
+  constraintIds?: string[];
 }
 
 export class RouteVersion {

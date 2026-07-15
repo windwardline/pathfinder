@@ -371,12 +371,12 @@ describe('RouteEngine - Golden Fixtures', () => {
     expect(after.focusActionId).toBe('f-a');
     expect(computeRouteDifference(before, after).focusActionChanged).toBe(true);
     expect(computeRouteDifference(before, after).deadlineChanges).toEqual([
-      {
+      expect.objectContaining({
         actionId: 'f-a',
         title: 'Submit the application',
         previousDeadline: undefined,
         newDeadline: '2026-07-15T12:00:00.000Z',
-      },
+      }),
     ]);
   });
 
@@ -514,5 +514,62 @@ describe('computeRouteDifference', () => {
     const diff = computeRouteDifference(before, after);
     expect(diff.added.map(s => s.actionId)).toContain('f-b');
     expect(diff.newlyAvailable.map(s => s.actionId)).toContain('f-b');
+  });
+
+  it('reports when a confirmed mandatory Obligation starts or stops influencing an Action', () => {
+    const before = buildRoute([
+      actionFact('f-a', 'Attend required appointment'),
+      actionFact('f-b', 'Submit follow-up form'),
+    ]);
+    const after = buildRoute([
+      actionFact('f-a', 'Attend required appointment', 'OPEN', 'desc', {
+        mandatoryObligation: true,
+      }),
+      actionFact('f-b', 'Submit follow-up form'),
+    ]);
+
+    expect(computeRouteDifference(before, after).obligationChanges).toEqual([
+      expect.objectContaining({
+        actionId: 'f-a',
+        title: 'Attend required appointment',
+        wasMandatory: false,
+        isMandatory: true,
+      }),
+    ]);
+  });
+
+  it('reports confirmed Constraint references added to an Action', () => {
+    const actions = [
+      actionFact('f-a', 'Attend the appointment'),
+      actionFact('f-b', 'Arrange transportation'),
+    ];
+    const before = buildRoute([
+      ...actions,
+      domainFact('f-constraint', 'CONSTRAINT', {
+        constraintType: 'TRANSPORTATION',
+        description: 'No transportation is available.',
+        status: 'RESOLVED',
+        targetActionIds: ['f-a'],
+      }),
+    ]);
+    const after = buildRoute([
+      ...actions,
+      domainFact('f-constraint', 'CONSTRAINT', {
+        constraintType: 'TRANSPORTATION',
+        description: 'No transportation is available.',
+        status: 'ACTIVE',
+        targetActionIds: ['f-a'],
+        resolutionActionId: 'f-b',
+      }),
+    ]);
+
+    expect(computeRouteDifference(before, after).constraintChanges).toEqual([
+      expect.objectContaining({
+        actionId: 'f-a',
+        title: 'Attend the appointment',
+        addedConstraintIds: ['f-constraint'],
+        removedConstraintIds: [],
+      }),
+    ]);
   });
 });

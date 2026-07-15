@@ -79,6 +79,7 @@ test('AT-001, AT-002, and AT-008: seeded Route completes and explains a meaningf
   await expect(events).toHaveCount(2);
   await expect(events.first()).toContainText('Action completed');
   await expect(events.first()).toContainText('Completed: Obtain a state identification card');
+  await expect(events.first()).toContainText('Moved:');
   await expect(events.nth(1)).toContainText('Fact confirmed');
   await expect(events.nth(1)).toContainText('Added:');
 });
@@ -152,6 +153,61 @@ test('guided intake exposes every canonical user-facing Fact type', async ({ pag
 
   await page.getByRole('link', { name: 'Today' }).click();
   await expect(page.getByRole('heading', { name: 'Obtain a state identification card' })).toBeVisible();
+});
+
+test('first-use guided intake leads from Fact type to Proposed review', async ({ page }) => {
+  await page.goto('/facts');
+  await page.getByRole('tab', { name: 'Add manually' }).click();
+  await expect(page.getByText('Guided intake · Step 1 of 3')).toBeVisible();
+  await page.getByLabel('What are you adding?').selectOption('ACTION');
+  await page.getByRole('button', { name: 'Continue to describe this Fact' }).click();
+  await expect(page.getByText('Guided intake · Step 2 of 3')).toBeVisible();
+  await page.getByLabel('What needs to happen?').fill('Call the identification office');
+  await page.getByRole('button', { name: 'Add as Proposed Fact' }).click();
+  await expect(page.getByText('Guided intake · Step 3 of 3')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Call the identification office' })).toBeVisible();
+});
+
+test('every confirmed Fact type can start a Proposed correction with inspectable evidence', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Demonstration scenario').selectOption('SD-003');
+  await page.getByRole('button', { name: 'Load the demonstration scenario' }).click();
+  await expect(page.getByRole('heading', { name: 'Call your supervision officer' })).toBeVisible();
+  await page.getByRole('link', { name: 'Facts', exact: true }).click();
+
+  const proposed = page.locator('li').filter({
+    has: page.getByRole('heading', { name: 'Reliable transportation is temporarily unavailable.' }),
+  });
+  await proposed.getByRole('button', { name: 'Confirm' }).click();
+  const dialog = page.getByRole('dialog', { name: 'You confirmed a fact' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Back to your Route' }).click();
+
+  const confirmed = page.locator('li').filter({
+    hasText: 'Reliable transportation is temporarily unavailable.',
+  });
+  await confirmed.getByText('View supporting evidence').click();
+  await expect(confirmed.getByText(/Integrity/)).toHaveCount(2);
+  await confirmed.getByRole('button', { name: 'Correct' }).click();
+  await confirmed.getByLabel('Corrected Constraint').fill('Transportation is available after 10:00 AM.');
+  await confirmed.getByRole('button', { name: 'Save Proposed correction' }).click();
+  await expect(page.getByText(/current Confirmed Fact stays active/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Transportation is available after 10:00 AM.' })).toBeVisible();
+});
+
+test('deadline intake derives urgency without exposing a ranking control', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Load the demonstration scenario' }).click();
+  await page.getByRole('link', { name: 'Facts', exact: true }).click();
+  await page.getByRole('tab', { name: 'Add manually' }).click();
+  await page.getByLabel('What are you adding?').selectOption('DEADLINE');
+  const dueDate = page.getByLabel('Due date and time');
+  if ((await dueDate.count()) === 0) {
+    await page.getByRole('button', { name: 'Continue to describe this Fact' }).click();
+  }
+  await expect(page.getByLabel('How strongly should this deadline affect the Route?')).toHaveCount(0);
+  await dueDate.fill('2026-12-31T12:00');
+  await expect(page.getByText(/derives urgency from the confirmed due date/)).toBeVisible();
 });
 
 test('seeded demonstration catalog selects the completed Route scenario', async ({ page }) => {

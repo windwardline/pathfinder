@@ -1,10 +1,11 @@
-import { db, users } from '@pathfinder/core';
+import { accountDeletionReceipts, db, users } from '@pathfinder/core';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { accountDeletionSchema } from '@/lib/validation';
 import { apiError, apiSuccess, correlationId } from '@/lib/api-response';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { recordAuditEvent } from '@/lib/audit';
+import { sha256 } from '@/lib/integrity';
 
 /** Hard-deletes the account aggregate; foreign-key cascades revoke sessions and user data. */
 export async function POST(request: Request) {
@@ -48,19 +49,24 @@ export async function POST(request: Request) {
 
   try {
     await db.transaction(async tx => {
+      const subjectHash = sha256(userId);
       const [deleted] = await tx
         .delete(users)
         .where(eq(users.id, userId))
         .returning({ id: users.id });
       if (!deleted) throw new Error('Account was not found.');
-      // Audit records intentionally have no user foreign key so the minimum
-      // categorical deletion receipt survives without account content.
+      await tx.insert(accountDeletionReceipts).values({
+        subjectHash,
+        correlationId: correlation,
+      });
+      // Audit records intentionally have no user foreign key or raw account
+      // identifier so the minimum categorical receipt survives safely.
       await recordAuditEvent(
         {
-          actorId: userId,
+          actorId: 'deleted-account',
           eventType: 'ACCOUNT_DELETION_COMPLETED',
           resourceType: 'ACCOUNT',
-          resourceId: userId,
+          resourceId: subjectHash,
           correlationId: correlation,
           metadata: { outcome: 'HARD_DELETE' },
         },

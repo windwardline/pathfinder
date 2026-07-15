@@ -36,11 +36,18 @@ export interface RouteResponse {
   route: Route;
   proposedCount: number;
   confirmedCount: number;
+  versions: {
+    application: string;
+    schema: string;
+    engine: string;
+    ruleSet: string;
+  };
 }
 
 export interface StepRef {
   actionId: string;
   title: string;
+  reasonCodes: string[];
 }
 
 export interface RouteDifference {
@@ -55,6 +62,12 @@ export interface RouteDifference {
   moved: Array<StepRef & { fromRank: number; toRank: number }>;
   deadlineChanges: Array<
     StepRef & { previousDeadline?: string; newDeadline?: string }
+  >;
+  obligationChanges: Array<
+    StepRef & { wasMandatory: boolean; isMandatory: boolean }
+  >;
+  constraintChanges: Array<
+    StepRef & { addedConstraintIds: string[]; removedConstraintIds: string[] }
   >;
   isMeaningful: boolean;
 }
@@ -101,7 +114,15 @@ export interface FactRecord {
   supersedesFactId?: string | null;
   supersededByFactId?: string | null;
   expiresAt?: string | null;
-  provenance?: Array<{ source: string; confidence: number | null; createdAt: string }>;
+  provenance?: Array<{
+    id: string;
+    source: string;
+    sourceType: string;
+    sourceReference: string;
+    confidence: number | null;
+    integrityHash: string;
+    createdAt: string;
+  }>;
 }
 
 export interface HistoryEntry {
@@ -142,7 +163,7 @@ export const api = {
   getFacts: () => request<{ facts: FactRecord[] }>('/api/facts'),
   getHistory: () => request<{ history: HistoryEntry[] }>('/api/history'),
   extract: (text: string) =>
-    request<{ facts: FactRecord[] }>('/api/ai/extract', {
+    request<{ facts: FactRecord[]; omittedCandidates: number }>('/api/ai/extract', {
       method: 'POST',
       body: JSON.stringify({ text, idempotencyKey: crypto.randomUUID() }),
     }),

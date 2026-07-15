@@ -1,8 +1,9 @@
 import { FactStatus, GraphVersionError } from '@pathfinder/core';
 import { auth } from '@/auth';
 import { apiError, apiSuccess, correlationId } from '@/lib/api-response';
-import { loadCurrentRoute, loadFactRows } from '@/lib/route-service';
+import { ENGINE_VERSION, RULE_SET_VERSION, loadCurrentRoute, loadFactRows } from '@/lib/route-service';
 import { emitOperationalEvent } from '@/lib/telemetry';
+import { APP_VERSION, SCHEMA_VERSION } from '@/lib/release';
 
 /** Returns the current published Route Version. Reads never publish or mutate. */
 export async function GET(request?: Request) {
@@ -41,6 +42,12 @@ export async function GET(request?: Request) {
         },
         proposedCount: rows.filter(row => row.status === FactStatus.Proposed).length,
         confirmedCount: rows.filter(row => row.status === FactStatus.Confirmed).length,
+        versions: {
+          application: APP_VERSION,
+          schema: SCHEMA_VERSION,
+          engine: ENGINE_VERSION,
+          ruleSet: RULE_SET_VERSION,
+        },
       },
       request,
       200,

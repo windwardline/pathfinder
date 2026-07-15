@@ -390,6 +390,16 @@ Release 1 infrastructure does not require:
 
 These capabilities require future evidence and governance.
 
+## Release 1 Managed-Service Mapping
+
+The deployable Release 1 implementation is recorded in
+`infrastructure/README.md`: Vercel provides Preview and Production, Neon provides
+Postgres and point-in-time restore, Resend provides authentication email, and
+GitHub Actions provides quality and operational checks. Requirements elsewhere
+in this document that depend on multi-region orchestration, custom networking,
+object storage, queues, or byte-identical artifact promotion are target-state
+guidance rather than claims about the pilot deployment.
+
 ## Testing Strategy
 
 ### Infrastructure Tests
@@ -464,7 +474,7 @@ Supports:
 - operational-runbook.md
 - privacy-security-specification.md
 - data-lifecycle.md
-- ADR-001 through ADR-005
+- ADR-001 through ADR-006 and applicable Product Decisions
 
 ## Definition of Done
 

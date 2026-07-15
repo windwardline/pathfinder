@@ -137,9 +137,29 @@ export function HistoryView() {
                   {entry.difference.removed.length > 0 && (
                     <li>Removed: {entry.difference.removed.map(s => s.title).join(', ')}</li>
                   )}
+                  {entry.difference.moved.length > 0 && (
+                    <li>
+                      Moved:{' '}
+                      {entry.difference.moved
+                        .map(item => `${item.title} (#${item.fromRank} → #${item.toRank})`)
+                        .join(', ')}
+                    </li>
+                  )}
                   {entry.difference.deadlineChanges?.length > 0 && (
                     <li>
                       Deadline changed: {entry.difference.deadlineChanges.map(item => item.title).join(', ')}
+                    </li>
+                  )}
+                  {entry.difference.obligationChanges?.length > 0 && (
+                    <li>
+                      Mandatory obligation changed:{' '}
+                      {entry.difference.obligationChanges.map(item => item.title).join(', ')}
+                    </li>
+                  )}
+                  {entry.difference.constraintChanges?.length > 0 && (
+                    <li>
+                      Confirmed constraint changed:{' '}
+                      {entry.difference.constraintChanges.map(item => item.title).join(', ')}
                     </li>
                   )}
                 </ul>

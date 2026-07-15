@@ -292,7 +292,7 @@ The approved Release 1 production values are:
 | Backup retention | Encrypted database recovery points use a rolling seven-day maximum retention window with at least one recovery point per 24 hours. |
 | Inactive account retention | Release 1 does not automatically delete an inactive account. The authenticated user controls deletion; inactive-account policy is reviewed annually. |
 | Export package expiration | Exports are generated synchronously, streamed to the authenticated browser, and are not stored as server-side packages. The browser object URL is revoked after the download begins. |
-| Deletion propagation | Primary records and sessions are removed in one transaction. Provider backup copies expire within the seven-day backup window; a restored environment must reapply deletion state before use. |
+| Deletion propagation | Primary records and sessions are removed in one transaction. A pseudonymous deletion receipt survives without the raw user id; recovery exports the current ledger and runs `db:reapply-deletions` before use. Provider backup copies expire within the seven-day backup window. |
 
 These values are Release 1 operational policy, not permission to retain data
 when the product no longer needs it. A provider with a shorter retention window

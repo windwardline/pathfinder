@@ -194,24 +194,41 @@ export function serializeReroute(event: HistoryEvent) {
 
 export function serializeDifference(difference: HistoryEvent['difference']) {
   if (!difference) return null;
+  const step = (item: { actionId: string; title: string; reasonCodes?: string[] }) => ({
+    action_id: item.actionId,
+    title: item.title,
+    reason_codes: item.reasonCodes ?? [],
+  });
   return {
     focus_action_changed: difference.focusActionChanged,
-    previous_focus_action: difference.previousFocus ?? null,
-    new_focus_action: difference.newFocus ?? null,
-    added_actions: difference.added,
-    removed_actions: difference.removed,
-    newly_available_actions: difference.newlyAvailable,
-    newly_blocked_actions: difference.newlyBlocked,
-    completed_actions: difference.completed,
+    previous_focus_action: difference.previousFocus ? step(difference.previousFocus) : null,
+    new_focus_action: difference.newFocus ? step(difference.newFocus) : null,
+    added_actions: difference.added.map(step),
+    removed_actions: difference.removed.map(step),
+    newly_available_actions: difference.newlyAvailable.map(step),
+    newly_blocked_actions: difference.newlyBlocked.map(step),
+    completed_actions: difference.completed.map(step),
     moved_actions: difference.moved.map(item => ({
-      action_id: item.actionId,
-      title: item.title,
+      ...step(item),
       previous_position: item.fromRank,
       new_position: item.toRank,
     })),
-    deadline_changes: difference.deadlineChanges,
-    obligation_changes: [],
-    constraint_changes: [],
+    deadline_changes: difference.deadlineChanges.map(item => ({
+      ...step(item),
+      previous_deadline: item.previousDeadline ?? null,
+      new_deadline: item.newDeadline ?? null,
+    })),
+    obligation_changes: difference.obligationChanges?.map(item => ({
+      ...step(item),
+      was_mandatory: item.wasMandatory,
+      is_mandatory: item.isMandatory,
+    })) ?? [],
+    constraint_changes: difference.constraintChanges?.map(item => ({
+      ...step(item),
+      added_constraint_ids: item.addedConstraintIds,
+      removed_constraint_ids: item.removedConstraintIds,
+    })) ?? [],
+    is_meaningful: difference.isMeaningful,
   };
 }
 

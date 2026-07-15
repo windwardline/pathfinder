@@ -161,7 +161,6 @@ This operation requires:
 A fact response includes:
 
 - `fact_id`
-- `user_id`
 - `fact_type`
 - `value`
 - `status`
@@ -175,7 +174,8 @@ A fact response includes:
 - `expires_at`
 - `version`
 
-Sensitive fields should be minimized in list responses.
+The authenticated user's identifier is intentionally omitted. Sensitive fields
+are minimized in list responses.
 
 ## Confirmation Contract
 

@@ -113,7 +113,7 @@ Release 1 APIs prioritize:
 
 Supports:
 
-- ADR-001 through ADR-005
+- ADR-001 through ADR-006 and applicable Product Decisions
 - route-engine.md
 - dependency-graph.md
 - ai-boundaries.md

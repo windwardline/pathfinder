@@ -136,6 +136,13 @@ weakening the requirement for the production provider's encrypted daily backup,
 seven-day retention, access control, monitoring, and periodic provider-level
 restore exercise.
 
+The drill also creates a backup before a fictional account deletion, records the
+later deletion only in the current pseudonymous ledger, restores the older
+backup, reapplies current deletion state with `db:reapply-deletions`, and proves
+the restored account is removed before validation continues. A provider-level
+restore must export the current deletion ledger before restoration and reapply
+it before the recovered environment can accept traffic.
+
 ## Failure Conditions
 
 Recovery is considered unsuccessful if:

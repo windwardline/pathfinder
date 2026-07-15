@@ -31,6 +31,7 @@ When documents conflict, the higher-authority source governs.
 | vision-lock.md | Preserves the frozen product identity | Product |
 | glossary.md | Defines protected canonical terminology | Product |
 | product-principles.md | Defines decision filters | Product |
+| version-2-design-freeze.md | Freezes product identity and trust boundaries | Product |
 
 ## 01 — Product
 
@@ -60,6 +61,7 @@ When documents conflict, the higher-authority source governs.
 | literature-review.md | Synthesizes evidence supporting the problem space | Product Research |
 | competitor-analysis.md | Tests differentiation against adjacent products | Product Research |
 | validation.md | Defines product-hypothesis validation | Product Research |
+| release-1-validation-study.md | Records the de-identified participant protocol and results | Product Research |
 
 ## 04 — Risk
 
@@ -78,6 +80,8 @@ When documents conflict, the higher-authority source governs.
 | ADR-003-ai-trust-boundary.md | AI is limited to interpretation and explanation |
 | ADR-004-confirmed-fact-trust-model.md | Only Confirmed Facts affect routing |
 | ADR-005-dependency-graph-as-infrastructure.md | The graph is infrastructure |
+| ADR-006-compact-snapshot-persistence.md | Release 1 uses a compact immutable snapshot projection |
+| PD-001-release-1-2-conformance.md | Release 1.2 closes conformance and pilot-readiness gaps |
 
 ## 06 — Development
 
@@ -118,6 +122,7 @@ When documents conflict, the higher-authority source governs.
 | acceptance-test-specification.md | Defines Release 1 acceptance tests | Product & Engineering |
 | regression-test-catalog.md | Defines protected behavior suites | Engineering |
 | adversarial-test-catalog.md | Defines hostile-input and trust-boundary tests | Engineering & Security |
+| tdd-case-study-deadline-urgency.md | Records the single Release 1.2 red-green-refactor case study | Engineering |
 
 ## 10 — Operations
 
@@ -129,6 +134,7 @@ When documents conflict, the higher-authority source governs.
 | incident-response.md | Defines production incident handling | Engineering |
 | backup-recovery.md | Defines recovery and continuity | Engineering |
 | operational-runbook.md | Defines routine operating procedures | Engineering |
+| release-1-2-record.md | Records the traceable Release 1.2 candidate and gates | Product & Engineering |
 
 ## 11 — Implementation
 
@@ -143,6 +149,7 @@ When documents conflict, the higher-authority source governs.
 | infrastructure-architecture.md | Defines infrastructure topology | Architecture |
 | ci-cd-architecture.md | Defines delivery automation | Engineering |
 | implementation-phases.md | Defines detailed governed execution phases | Product & Engineering |
+| requirements-traceability.md | Maps Release 1 requirements to implementation evidence | Product & Engineering |
 
 ## Canonical Concept Map
 
@@ -165,6 +172,7 @@ When documents conflict, the higher-authority source governs.
 | Release testing | 09-testing documents |
 | Operational readiness | 10-operations documents |
 | Implementation sequence | implementation-phases.md |
+| Implementation conformance | requirements-traceability.md |
 
 ## Change Impact Guide
 

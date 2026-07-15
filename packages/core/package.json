@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "db:reapply-deletions": "tsx src/db/reapply-deletions.ts"
   },
   "dependencies": {
     "@auth/core": "^0.34.3",

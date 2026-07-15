@@ -118,6 +118,16 @@ export function RerouteSummary({
               {difference.deadlineChanges.map(change => change.title).join(', ')}
             </DiffSection>
           )}
+          {difference.obligationChanges?.length > 0 && (
+            <DiffSection label="Mandatory obligation changed" tone="amber">
+              {difference.obligationChanges.map(change => change.title).join(', ')}
+            </DiffSection>
+          )}
+          {difference.constraintChanges?.length > 0 && (
+            <DiffSection label="Confirmed constraint changed" tone="amber">
+              {difference.constraintChanges.map(change => change.title).join(', ')}
+            </DiffSection>
+          )}
           </dl>
 
           <button

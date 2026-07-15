@@ -1,6 +1,6 @@
 import Groq from 'groq-sdk';
 import { z } from 'zod';
-import { extractedCandidatesSchema } from '@/lib/validation';
+import { extractedFactCandidatesSchema } from '@/lib/validation';
 import { PromptRegistry } from './PromptRegistry';
 
 // AI boundary (ADR-003): the model may interpret, extract, summarize, and
@@ -27,12 +27,7 @@ export class ExtractionUnavailableError extends Error {
   }
 }
 
-export interface ExtractedCandidate {
-  title: string;
-  description: string;
-  sourceText: string;
-  confidence: number;
-}
+export type ExtractedCandidate = z.infer<typeof extractedFactCandidatesSchema>[number];
 
 export class AIGateway {
   /**
@@ -40,21 +35,21 @@ export class AIGateway {
    * throws ExtractionUnavailableError — failures are never silently converted
    * to an empty result.
    */
-  static async extractCandidateActions(text: string): Promise<ExtractedCandidate[]> {
+  static async extractCandidateFacts(text: string): Promise<ExtractedCandidate[]> {
     const model = process.env.GROQ_MODEL || DEFAULT_MODEL;
     const startedAt = performance.now();
     let content: string | null | undefined;
     try {
       const response = await getGroq().chat.completions.create({
         messages: [
-          { role: 'system', content: PromptRegistry.candidateActions.system },
-          { role: 'user', content: PromptRegistry.candidateActions.user(text) },
+          { role: 'system', content: PromptRegistry.candidateFacts.system },
+          { role: 'user', content: PromptRegistry.candidateFacts.user(text) },
         ],
         model,
         response_format: { type: 'json_object' },
-        temperature: PromptRegistry.candidateActions.modelConstraints.temperature,
+        temperature: PromptRegistry.candidateFacts.modelConstraints.temperature,
         max_completion_tokens:
-          PromptRegistry.candidateActions.modelConstraints.maxOutputTokens,
+          PromptRegistry.candidateFacts.modelConstraints.maxOutputTokens,
       });
       content = response.choices[0]?.message?.content;
     } catch (e) {
@@ -74,11 +69,11 @@ export class AIGateway {
       throw new ExtractionUnavailableError('The extraction service returned invalid JSON.');
     }
 
-    const actions = z
-      .object({ actions: extractedCandidatesSchema })
+    const facts = z
+      .object({ facts: extractedFactCandidatesSchema })
       .safeParse(parsed);
-    if (!actions.success) {
-      console.error('Extraction output failed validation:', actions.error.message);
+    if (!facts.success) {
+      console.error('Extraction output failed validation:', facts.error.message);
       throw new ExtractionUnavailableError('The extraction service returned an unexpected shape.');
     }
 
@@ -87,13 +82,13 @@ export class AIGateway {
         service: 'ai-gateway',
         operation: 'candidate_fact_extraction',
         outcome: 'success',
-        prompt_version: PromptRegistry.candidateActions.version,
+        prompt_version: PromptRegistry.candidateFacts.version,
         model,
-        candidate_count: actions.data.actions.length,
+        candidate_count: facts.data.facts.length,
         duration_ms: Math.round(performance.now() - startedAt),
       })
     );
 
-    return actions.data.actions;
+    return facts.data.facts;
   }
 }

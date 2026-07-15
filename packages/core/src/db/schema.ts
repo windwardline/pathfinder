@@ -195,3 +195,15 @@ export const auditEvents = pgTable("audit_event", {
   metadata: json("metadata"),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
+
+/**
+ * Pseudonymous deletion ledger copied forward during recovery. It contains no
+ * email, raw user id, Fact value, document content, or foreign key to deleted
+ * account data.
+ */
+export const accountDeletionReceipts = pgTable("account_deletion_receipt", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  subjectHash: text("subjectHash").notNull().unique(),
+  correlationId: text("correlationId").notNull(),
+  deletedAt: timestamp("deletedAt", { mode: "date" }).notNull().defaultNow(),
+});

@@ -27,7 +27,25 @@ The graph may be represented relationally or projected into an in-memory graph f
 
 A dedicated graph database is not required for Release 1.
 
-## Core Tables
+### Release 1 Physical Projection
+
+ADR-006 distinguishes this logical entity catalog from the deployed physical
+schema. Release 1 persists canonical domain state through:
+
+- `user`, Auth.js account, session, and verification-token tables;
+- `fact`, `provenance`, and `fact_event` lifecycle tables;
+- immutable `graph_version.snapshotData` projections;
+- `routing_snapshot` publication records;
+- `reroute_event.differenceData` structured differences;
+- idempotency, rate-limit, audit, and pseudonymous account-deletion receipts.
+
+Plans, Goals, Actions, Requirements, Obligations, Constraints, Deadlines,
+Blockers, Dependencies, graph nodes, graph edges, Routes, Route Versions, Route
+Steps, and explanations remain explicit logical entities and validated payloads.
+They are not separate physical tables in Release 1. A normalized projection is
+a governed future option, not a claim about the deployed schema.
+
+## Logical Entity Contracts
 
 ### users
 

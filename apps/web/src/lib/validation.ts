@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { deriveDeadlineSeverity } from './deadline-policy';
 
 export const actionPayloadSchema = z.object({
   key: z.literal('ACTION'),
@@ -83,9 +84,12 @@ export const deadlinePayloadSchema = z.object({
   value: z.object({
     title: z.string().trim().min(1).max(120),
     dueAt: z.string().datetime(),
-    severity: z.enum(['LOW', 'MODERATE', 'HIGH', 'CRITICAL']),
+    severity: z.enum(['LOW', 'MODERATE', 'HIGH', 'CRITICAL']).optional(),
     targetActionId: z.string().uuid(),
-  }),
+  }).transform(value => ({
+    ...value,
+    severity: deriveDeadlineSeverity(value.dueAt),
+  })),
 });
 
 export const blockerPayloadSchema = z.object({
@@ -212,13 +216,42 @@ export const createV1FactSchema = z.object({
 });
 
 /** Shape the AI extraction must return; anything else is rejected. */
-export const extractedCandidateSchema = z.object({
+const extractedCandidateBase = z.object({
   title: z.string().trim().min(1).max(120),
   description: z.string().trim().max(500).catch(''),
   sourceText: z.string().trim().max(1000).catch(''),
   confidence: z.number().int().min(1).max(100).catch(50),
 });
 
-export const extractedCandidatesSchema = z
-  .array(extractedCandidateSchema)
+export const extractedFactCandidateSchema = z.discriminatedUnion('factType', [
+  extractedCandidateBase.extend({ factType: z.literal('ACTION') }),
+  extractedCandidateBase.extend({ factType: z.literal('GOAL') }),
+  extractedCandidateBase.extend({
+    factType: z.literal('OBLIGATION'),
+    startAt: z.string().datetime(),
+    endAt: z.string().datetime().optional(),
+  }),
+  extractedCandidateBase.extend({
+    factType: z.literal('DEADLINE'),
+    dueAt: z.string().datetime(),
+    targetActionTitle: z.string().trim().min(1).max(120),
+  }),
+  extractedCandidateBase.extend({
+    factType: z.literal('REQUIREMENT'),
+    hardness: z.enum(['HARD', 'SOFT']),
+    targetActionTitle: z.string().trim().min(1).max(120),
+  }),
+  extractedCandidateBase.extend({
+    factType: z.literal('CONSTRAINT'),
+    constraintType: z.enum(['TIME', 'TRANSPORTATION', 'FINANCIAL', 'LOCATION', 'AVAILABILITY', 'ACCESSIBILITY', 'POLICY']),
+    targetActionTitle: z.string().trim().min(1).max(120),
+  }),
+  extractedCandidateBase.extend({
+    factType: z.literal('BLOCKER'),
+    targetActionTitle: z.string().trim().min(1).max(120),
+  }),
+]);
+
+export const extractedFactCandidatesSchema = z
+  .array(extractedFactCandidateSchema)
   .max(10);

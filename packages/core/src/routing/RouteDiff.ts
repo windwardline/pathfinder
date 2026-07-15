@@ -3,6 +3,7 @@ import { RouteVersion, RouteStepStatus } from './RouteVersion';
 export interface RouteStepRef {
   actionId: string;
   title: string;
+  reasonCodes: string[];
 }
 
 export interface MovedStep extends RouteStepRef {
@@ -13,6 +14,16 @@ export interface MovedStep extends RouteStepRef {
 export interface DeadlineChange extends RouteStepRef {
   previousDeadline?: string;
   newDeadline?: string;
+}
+
+export interface ObligationChange extends RouteStepRef {
+  wasMandatory: boolean;
+  isMandatory: boolean;
+}
+
+export interface ConstraintChange extends RouteStepRef {
+  addedConstraintIds: string[];
+  removedConstraintIds: string[];
 }
 
 /**
@@ -31,6 +42,8 @@ export interface RouteDifference {
   completed: RouteStepRef[];
   moved: MovedStep[];
   deadlineChanges: DeadlineChange[];
+  obligationChanges: ObligationChange[];
+  constraintChanges: ConstraintChange[];
   isMeaningful: boolean;
 }
 
@@ -43,9 +56,10 @@ export function computeRouteDifference(
   const prevMap = new Map(prev.steps.map(s => [s.actionId, s]));
   const nextMap = new Map(next.steps.map(s => [s.actionId, s]));
 
-  const ref = (s: { actionId: string; title: string }): RouteStepRef => ({
+  const ref = (s: { actionId: string; title: string; reasonCodes: string[] }): RouteStepRef => ({
     actionId: s.actionId,
     title: s.title,
+    reasonCodes: s.reasonCodes,
   });
 
   const added = next.steps.filter(s => !prevMap.has(s.actionId)).map(ref);
@@ -60,6 +74,8 @@ export function computeRouteDifference(
   const completed: RouteStepRef[] = [];
   const moved: MovedStep[] = [];
   const deadlineChanges: DeadlineChange[] = [];
+  const obligationChanges: ObligationChange[] = [];
+  const constraintChanges: ConstraintChange[] = [];
 
   for (const nextStep of next.steps) {
     const prevStep = prevMap.get(nextStep.actionId);
@@ -71,6 +87,28 @@ export function computeRouteDifference(
         ...ref(nextStep),
         previousDeadline: prevStep.deadline,
         newDeadline: nextStep.deadline,
+      });
+    }
+    if (Boolean(prevStep.mandatoryObligation) !== Boolean(nextStep.mandatoryObligation)) {
+      obligationChanges.push({
+        ...ref(nextStep),
+        wasMandatory: Boolean(prevStep.mandatoryObligation),
+        isMandatory: Boolean(nextStep.mandatoryObligation),
+      });
+    }
+    const previousConstraintIds = new Set(prevStep.constraintIds ?? []);
+    const nextConstraintIds = new Set(nextStep.constraintIds ?? []);
+    const addedConstraintIds = [...nextConstraintIds]
+      .filter(id => !previousConstraintIds.has(id))
+      .sort();
+    const removedConstraintIds = [...previousConstraintIds]
+      .filter(id => !nextConstraintIds.has(id))
+      .sort();
+    if (addedConstraintIds.length > 0 || removedConstraintIds.length > 0) {
+      constraintChanges.push({
+        ...ref(nextStep),
+        addedConstraintIds,
+        removedConstraintIds,
       });
     }
     if (statusChanged && nextStep.status === RouteStepStatus.COMPLETED) {
@@ -104,7 +142,9 @@ export function computeRouteDifference(
     newlyBlocked.length > 0 ||
     completed.length > 0 ||
     moved.length > 0 ||
-    deadlineChanges.length > 0;
+    deadlineChanges.length > 0 ||
+    obligationChanges.length > 0 ||
+    constraintChanges.length > 0;
 
   return {
     focusActionChanged,
@@ -117,6 +157,8 @@ export function computeRouteDifference(
     completed,
     moved,
     deadlineChanges,
+    obligationChanges,
+    constraintChanges,
     isMeaningful,
   };
 }

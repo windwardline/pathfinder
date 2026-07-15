@@ -43,12 +43,13 @@ Read these documents before implementation:
 3. [Vision Lock](docs/00-governance/vision-lock.md)
 4. [Glossary](docs/00-governance/glossary.md)
 5. [Product Principles](docs/00-governance/product-principles.md)
-6. [Release 1](docs/01-product/release-1.md)
-7. [System Overview](docs/02-architecture/system-overview.md)
-8. [Architecture Decision Records](docs/05-decisions/)
-9. [Definition of Done](docs/06-development/definition-of-done.md)
-10. [Implementation Roadmap](docs/11-implementation/implementation-roadmap.md)
-11. [Implementation Phases](docs/11-implementation/implementation-phases.md)
+6. [Version 2 Design Freeze](docs/00-governance/version-2-design-freeze.md)
+7. [Release 1](docs/01-product/release-1.md)
+8. [System Overview](docs/02-architecture/system-overview.md)
+9. [Architecture Decision Records and Product Decisions](docs/05-decisions/)
+10. [Definition of Done](docs/06-development/definition-of-done.md)
+11. [Requirements Traceability](docs/11-implementation/requirements-traceability.md)
+12. [Release 1 Validation Study](docs/03-research/release-1-validation-study.md)
 
 ## Local Development
 

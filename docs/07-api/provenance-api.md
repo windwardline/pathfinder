@@ -118,7 +118,6 @@ Returns the structured lineage linking:
 A Provenance Record includes:
 
 - `provenance_id`
-- `user_id`
 - `source_type`
 - `source_reference`
 - `created_at`
@@ -131,6 +130,10 @@ A Provenance Record includes:
 - `extraction_metadata`
 - `retention_policy`
 - `status`
+- `fact_id` (when the record has been claimed by a Fact)
+
+The authenticated user's identifier is intentionally omitted from the
+representation.
 
 ## Immutability
 

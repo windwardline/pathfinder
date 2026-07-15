@@ -8,6 +8,7 @@ import {
   Fact,
   FactStatus,
   GraphVersion,
+  GraphVersionError,
   RoutingSnapshot,
   RouteEngine,
   RouteVersion,
@@ -102,28 +103,36 @@ export function buildRoute(confirmedFacts: Fact[], snapshotId?: string): RouteVe
 
 /** Returns the latest published immutable Route, with a stable empty fallback. */
 export async function loadCurrentRoute(userId: string): Promise<RouteVersion> {
-  const [latestGraph] = await db
+  const publishedGraphs = await db
     .select()
     .from(graphVersions)
     .where(eq(graphVersions.userId, userId))
     .orderBy(desc(graphVersions.sequenceNumber))
-    .limit(1);
+    .limit(100);
 
-  if (latestGraph) {
+  for (const graphVersion of publishedGraphs) {
+    if (sha256(graphVersion.snapshotData) !== graphVersion.inputSnapshotHash) {
+      console.error('Published GraphVersion failed integrity validation:', graphVersion.id);
+      continue;
+    }
     const [snapshot] = await db
       .select()
       .from(routingSnapshots)
       .where(
         and(
           eq(routingSnapshots.userId, userId),
-          eq(routingSnapshots.graphVersionId, latestGraph.id)
+          eq(routingSnapshots.graphVersionId, graphVersion.id)
         )
       )
       .limit(1);
     if (snapshot) {
-      const published = routeFromSnapshotData(latestGraph.snapshotData, snapshot.id);
+      const published = routeFromSnapshotData(graphVersion.snapshotData, snapshot.id);
       if (published) return published;
     }
+  }
+
+  if (publishedGraphs.length > 0) {
+    throw new GraphVersionError('No integrity-valid published GraphVersion is available.');
   }
 
   return buildRoute(await loadConfirmedFacts(userId));
@@ -400,7 +409,11 @@ export async function loadRouteHistory(userId: string, limit = 100) {
         previousRoute && newRoute
           ? computeRouteDifference(previousRoute, newRoute)
           : isRouteDifference(event.differenceData)
-            ? event.differenceData
+            ? {
+                ...event.differenceData,
+                obligationChanges: event.differenceData.obligationChanges ?? [],
+                constraintChanges: event.differenceData.constraintChanges ?? [],
+              }
             : null,
       newFocus: newRoute?.focusActionId
         ? newRoute.steps.find(step => step.actionId === newRoute.focusActionId)?.title ?? null
@@ -421,6 +434,8 @@ function isRouteDifference(value: unknown): value is RouteDifference {
     Array.isArray(candidate.completed) &&
     Array.isArray(candidate.moved) &&
     Array.isArray(candidate.deadlineChanges) &&
+    (candidate.obligationChanges === undefined || Array.isArray(candidate.obligationChanges)) &&
+    (candidate.constraintChanges === undefined || Array.isArray(candidate.constraintChanges)) &&
     typeof candidate.isMeaningful === 'boolean'
   );
 }

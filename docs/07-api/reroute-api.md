@@ -100,11 +100,9 @@ This endpoint does not accept:
 
 Response includes:
 
-- `reroute_event_id`
 - `status`
-- `previous_route_version_id`
-- `new_route_version_id`
-- `created_at`
+- `reroute` (the immutable Reroute Event representation)
+- `idempotent_replay`
 
 ### Get Route Difference
 
@@ -117,7 +115,6 @@ Returns the structured difference between the previous and new Route Versions.
 A Reroute Event includes:
 
 - `reroute_event_id`
-- `user_id`
 - `previous_route_version_id`
 - `new_route_version_id`
 - `trigger_type`
@@ -135,6 +132,7 @@ A Route Difference includes:
 - `focus_action_changed`
 - `previous_focus_action`
 - `new_focus_action`
+- `added_actions`
 - `moved_actions`
 - `newly_blocked_actions`
 - `newly_available_actions`
@@ -143,6 +141,10 @@ A Route Difference includes:
 - `deadline_changes`
 - `obligation_changes`
 - `constraint_changes`
+- `is_meaningful`
+
+Action references use `action_id`, `title`, and deterministic `reason_codes`.
+The authenticated user's identifier is intentionally omitted from the response.
 
 ### Moved Action
 
@@ -155,21 +157,29 @@ Includes:
 
 ### Newly Blocked Action
 
-Includes:
-
-- `action_id`
-- `blocker_ids`
-- `requirement_ids`
-- `reason_codes`
+Includes `action_id`, `title`, and `reason_codes`. Blocker and Requirement
+identifiers remain inside the governed routing model; the user-facing Route
+provides their plain-language effect without exposing graph topology.
 
 ### Newly Available Action
 
-Includes:
+Includes `action_id`, `title`, and `reason_codes`.
 
-- `action_id`
-- `unlocked_by_action_id` (optional)
-- `satisfied_requirement_ids`
-- `reason_codes`
+### Deadline Change
+
+Includes `action_id`, `title`, `reason_codes`, `previous_deadline`, and
+`new_deadline`.
+
+### Obligation Change
+
+Includes `action_id`, `title`, `reason_codes`, `was_mandatory`, and
+`is_mandatory`.
+
+### Constraint Change
+
+Includes `action_id`, `title`, `reason_codes`, `added_constraint_ids`, and
+`removed_constraint_ids`. These references provide traceability for the
+confirmed change without exposing the Dependency Graph as a client model.
 
 ## Explanation Contract
 

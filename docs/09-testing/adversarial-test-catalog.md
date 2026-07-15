@@ -107,6 +107,21 @@ The adversarial suite executes:
 - Before release candidates.
 - After security-sensitive dependency updates.
 
+## Automated Evidence Map
+
+| ID | Automated evidence |
+|---|---|
+| ATC-001 | `apps/web/tests/ai-boundary.test.ts` prompt-injection wrapping |
+| ATC-002 | AI candidate schema plus Proposed-only API persistence and browser confirmation boundary |
+| ATC-003 | Cross-user Fact, Provenance, Route, and export integration tests |
+| ATC-004 | Provenance tamper detection integration test |
+| ATC-005 | Lifecycle validation and concurrent transition integration tests |
+| ATC-006 | Cycle, dangling edge, duplicate id, and relationship tests in `RouteEngine.test.ts` |
+| ATC-007 | Atomic Reroute publication and corrupted GraphVersion fallback integration test |
+| ATC-008 | Schema, oversized input, idempotency replay, and conflicting-key tests |
+| ATC-009 | Competing confirmation/rejection and per-user publication-lock tests |
+| ATC-010 | Unauthenticated route handlers plus cross-user and export/deletion authorization tests |
+
 ## Governance
 
 Expected behavior changes require:
