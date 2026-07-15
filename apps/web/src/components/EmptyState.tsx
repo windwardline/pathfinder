@@ -3,6 +3,10 @@
 import { useState } from 'react';
 import { TopoBackdrop } from './TopoBackdrop';
 import { api } from '@/lib/client-api';
+import {
+  DEMONSTRATION_SCENARIO_CATALOG,
+  DemonstrationScenarioId,
+} from '@/lib/demo-scenario-catalog';
 
 /**
  * Differentiated empty states. An empty screen is an invitation to act, and
@@ -17,12 +21,13 @@ export function EmptyState({
 }) {
   const [seeding, setSeeding] = useState(false);
   const [seedError, setSeedError] = useState<string | null>(null);
+  const [scenarioId, setScenarioId] = useState<DemonstrationScenarioId>('SD-001');
 
   const seed = async () => {
     setSeeding(true);
     setSeedError(null);
     try {
-      await api.seedDemo();
+      await api.seedDemo(scenarioId);
       onSeeded?.();
     } catch (e) {
       setSeedError(e instanceof Error ? e.message : 'Loading the scenario failed.');
@@ -43,7 +48,27 @@ export function EmptyState({
               and confirm it. Pathfinder turns Confirmed Facts into a Route: what comes next,
               why it comes next, and what it unlocks.
             </p>
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <div className="mx-auto mt-8 max-w-md text-left">
+              <label htmlFor="demonstration-scenario" className="block text-xs font-medium text-ink-soft">
+                Demonstration scenario
+              </label>
+              <select
+                id="demonstration-scenario"
+                value={scenarioId}
+                onChange={event => setScenarioId(event.target.value as DemonstrationScenarioId)}
+                className="mt-1.5 w-full rounded-lg border border-hairline bg-paper px-3 py-2.5 text-sm focus:border-spruce focus:outline-none"
+              >
+                {DEMONSTRATION_SCENARIO_CATALOG.map(scenario => (
+                  <option key={scenario.id} value={scenario.id}>
+                    {scenario.id} — {scenario.title}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs leading-relaxed text-ink-faint">
+                {DEMONSTRATION_SCENARIO_CATALOG.find(scenario => scenario.id === scenarioId)?.objective}
+              </p>
+            </div>
+            <div className="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <a
                 href="/facts"
                 className="rounded-lg bg-spruce px-5 py-2.5 text-sm font-medium text-paper transition-opacity hover:opacity-90"

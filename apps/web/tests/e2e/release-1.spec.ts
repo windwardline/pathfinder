@@ -109,6 +109,17 @@ test('AT-003 and AT-004: a Proposed Fact cannot affect the Route until confirmat
   await expect(added).toHaveText('Apply for a transit pass');
 });
 
+test('seeded demonstration catalog selects the completed Route scenario', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Demonstration scenario').selectOption('SD-010');
+  await expect(page.getByText('Demonstrate successful completion of all Goals.')).toBeVisible();
+  await page.getByRole('button', { name: 'Load the demonstration scenario' }).click();
+
+  await expect(
+    page.getByRole('heading', { name: 'Every Action on your Route is complete' })
+  ).toBeVisible();
+});
+
 test('mobile acceptance: the Focus Action and Reroute remain available at 390px', async ({
   page,
 }) => {

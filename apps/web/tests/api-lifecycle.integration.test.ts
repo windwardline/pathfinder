@@ -232,6 +232,13 @@ integration('API lifecycle and history integration', () => {
   });
 
   it('returns a stable current Route Version and rejects stale Reroute requests', async () => {
+    expect(
+      (
+        await seedDemo(
+          jsonRequest('/api/demo/seed', { scenarioId: 'SD-001' })
+        )
+      ).status
+    ).toBe(200);
     const first = await (await getRoute()).json();
     const second = await (await getRoute()).json();
     expect(second.route.id).toBe(first.route.id);
