@@ -1,12 +1,10 @@
 name: Documentation validation
 
 on:
+  # This check is required by the main-branch protection rule, so it must run
+  # for every pull request. A path filter here would leave code-only PRs with
+  # a permanently missing required check.
   pull_request:
-    paths:
-      - "**/*.md"
-      - ".github/ISSUE_TEMPLATE/**"
-      - ".github/workflows/documentation.yml"
-      - "scripts/validate_documentation.py"
   push:
     branches:
       - main
