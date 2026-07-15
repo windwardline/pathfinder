@@ -1,0 +1,30 @@
+name: Production health
+
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-health
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify production readiness
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify public health contract
+        run: node scripts/verify_production_health.mjs
+        env:
+          HEALTH_URL: https://pathfinder.windwardline.com/api/health

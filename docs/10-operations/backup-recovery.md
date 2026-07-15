@@ -122,6 +122,20 @@ Perform scheduled recovery exercises that include:
 - Recovery after schema migration
 - Deletion propagation verification
 
+## Automated Recovery Drill
+
+`.github/workflows/recovery-drill.yml` runs weekly and on demand against
+throwaway PostgreSQL databases. It applies the canonical migrations, populates
+fictional Release 1 data through the integration suite, creates a custom-format
+backup, restores it into a separate database, and reruns the ownership,
+Provenance, Route, Reroute, and lifecycle integration tests.
+
+The workflow never connects to Production and does not retain the database dump
+as an artifact. It verifies the repository's recovery procedure without
+weakening the requirement for the production provider's encrypted daily backup,
+seven-day retention, access control, monitoring, and periodic provider-level
+restore exercise.
+
 ## Failure Conditions
 
 Recovery is considered unsuccessful if:

@@ -1,0 +1,68 @@
+name: Recovery drill
+
+on:
+  schedule:
+    - cron: "23 10 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recovery-drill
+  cancel-in-progress: false
+
+jobs:
+  restore-and-verify:
+    name: Restore and verify a throwaway database
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      POSTGRES_URL: postgres://postgres:postgres@localhost:5432/pathfinder_source
+      AUTH_SECRET: recovery-drill-only-not-a-production-secret
+      PGPASSWORD: postgres
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pathfinder_source
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d pathfinder_source"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Apply source migrations
+        run: pnpm --filter @pathfinder/core db:migrate
+      - name: Populate and verify the source database
+        run: pnpm --filter web test tests/api-lifecycle.integration.test.ts
+      - name: Create the backup
+        run: pg_dump "$POSTGRES_URL" --format=custom --file="$RUNNER_TEMP/pathfinder.dump"
+      - name: Restore into a separate throwaway database
+        run: |
+          createdb --host=localhost --username=postgres pathfinder_restore
+          pg_restore \
+            --dbname=postgres://postgres:postgres@localhost:5432/pathfinder_restore \
+            --no-owner \
+            --no-privileges \
+            "$RUNNER_TEMP/pathfinder.dump"
+      - name: Verify ownership, routing, and lifecycle behavior after restore
+        run: pnpm --filter web test tests/api-lifecycle.integration.test.ts
+        env:
+          POSTGRES_URL: postgres://postgres:postgres@localhost:5432/pathfinder_restore
