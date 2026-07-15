@@ -24,6 +24,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
+          package-manager-cache: false
       - name: Verify public health contract
         run: node scripts/verify_production_health.mjs
         env:
