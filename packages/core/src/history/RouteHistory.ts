@@ -38,15 +38,22 @@ function emptyBaselineDifference(next: RouteVersion): RouteDifference {
       ? {
           actionId: next.focusActionId,
           title: next.steps.find(s => s.actionId === next.focusActionId)?.title ?? '',
+          reasonCodes: next.steps.find(s => s.actionId === next.focusActionId)?.reasonCodes ?? [],
         }
       : undefined,
-    added: next.steps.map(s => ({ actionId: s.actionId, title: s.title })),
+    added: next.steps.map(s => ({
+      actionId: s.actionId,
+      title: s.title,
+      reasonCodes: s.reasonCodes,
+    })),
     removed: [],
     newlyAvailable: [],
     newlyBlocked: [],
     completed: [],
     moved: [],
     deadlineChanges: [],
+    obligationChanges: [],
+    constraintChanges: [],
     isMeaningful: next.steps.length > 0,
   };
 }

@@ -3,6 +3,10 @@ packages:
   - 'packages/*'
   - 'services/*'
 
+blockExoticSubdeps: true
+minimumReleaseAge: 10080
+trustPolicy: no-downgrade
+
 overrides:
   '@auth/core>cookie': 0.7.2
   '@esbuild-kit/core-utils>esbuild': 0.25.12

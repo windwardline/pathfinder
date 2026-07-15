@@ -32,7 +32,7 @@ export default function PrivacyPage() {
             <h2 className="font-serif text-2xl text-ink">How AI is bounded</h2>
             <p className="mt-3">
               Text you paste is sent to the configured extraction provider to identify candidate
-              Actions. Extracted source excerpts may be retained as Provenance. Every result begins
+              Facts. Extracted source excerpts may be retained as Provenance. Every result begins
               as a Proposed Fact: AI cannot confirm it, prioritize it, or order your Route.
             </p>
           </section>

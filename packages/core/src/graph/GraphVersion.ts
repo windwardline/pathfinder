@@ -17,6 +17,7 @@ export class GraphVersion {
   public readonly sourceFacts: string[];
   public readonly createdAt: Date;
   public readonly actionBlockers = new Map<string, string[]>();
+  public readonly actionConstraintIds = new Map<string, string[]>();
 
   constructor(id: string, facts: Fact[]) {
     // 1. Ensure only Confirmed facts are present (ADR-005)
@@ -211,6 +212,10 @@ export class GraphVersion {
         }
       } else if (fact.payload.key === 'CONSTRAINT' && value.status === 'ACTIVE') {
         for (const targetId of value.targetActionIds ?? []) {
+          this.actionConstraintIds.set(targetId, [
+            ...(this.actionConstraintIds.get(targetId) ?? []),
+            fact.id,
+          ]);
           addResolution(
             fact.id,
             targetId,

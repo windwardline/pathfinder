@@ -7,6 +7,7 @@ import {
   DEMONSTRATION_SCENARIO_CATALOG,
   DemonstrationScenarioId,
 } from '@/lib/demo-scenario-catalog';
+import type { RouteStep } from '@/lib/client-api';
 
 /**
  * Differentiated empty states. An empty screen is an invitation to act, and
@@ -15,9 +16,11 @@ import {
 export function EmptyState({
   kind,
   onSeeded,
+  blockedSteps = [],
 }: {
   kind: 'no-facts' | 'no-confirmed-facts' | 'route-completed' | 'route-blocked';
   onSeeded?: () => void;
+  blockedSteps?: RouteStep[];
 }) {
   const [seeding, setSeeding] = useState(false);
   const [seedError, setSeedError] = useState<string | null>(null);
@@ -127,14 +130,34 @@ export function EmptyState({
           <>
             <h2 className="font-serif text-2xl">Your Route is blocked right now</h2>
             <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-ink-soft">
-              No Action is currently available. Review the blocked steps on your Route to see
-              which conditions need to change first.
+              No Action is currently available. These confirmed conditions need attention before
+              your Route can move forward.
             </p>
+            {blockedSteps.length > 0 && (
+              <ul className="mx-auto mt-6 max-w-xl space-y-3 text-left">
+                {blockedSteps.map(step => (
+                  <li key={step.actionId} className="rounded-xl border border-hairline bg-paper/80 px-4 py-3">
+                    <p className="text-sm font-medium text-ink">{step.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-ink-soft">{step.explanation}</p>
+                    {step.blockedBy.length > 0 && (
+                      <p className="mt-2 text-xs text-amber">
+                        Next resolvable condition: {step.blockedBy.join(', ')}
+                      </p>
+                    )}
+                    {step.provenance.length > 0 && (
+                      <p className="mt-2 text-[11px] text-ink-faint">
+                        Supported by {step.provenance.map(item => item.source.replaceAll('_', ' ')).join(', ')}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
             <a
-              href="/route"
+              href="/facts"
               className="mt-8 inline-block rounded-lg bg-spruce px-5 py-2.5 text-sm font-medium text-paper transition-opacity hover:opacity-90"
             >
-              Review blocked steps
+              Review or update Confirmed Facts
             </a>
           </>
         )}

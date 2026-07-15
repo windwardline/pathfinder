@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   auditEvents,
+  accountDeletionReceipts,
   apiRateLimits,
   db,
   factEvents,
@@ -15,6 +16,7 @@ import {
   verificationTokens,
 } from '@pathfinder/core';
 import { eq } from 'drizzle-orm';
+import { sha256 } from '../src/lib/integrity';
 
 const USER_ID = 'integration-user';
 let authenticatedUserId = USER_ID;
@@ -36,9 +38,12 @@ import { POST as deleteAccount } from '../src/app/api/account/delete/route';
 import { GET as getV1Fact } from '../src/app/v1/facts/[factId]/route';
 import { POST as requestReroute } from '../src/app/v1/reroutes/route';
 import { POST as createV1Provenance } from '../src/app/v1/provenance/route';
+import { POST as validateV1Provenance } from '../src/app/v1/provenance/[provenanceId]/validate/route';
 import { POST as supersedeV1Fact } from '../src/app/v1/facts/[factId]/supersede/route';
 import { GET as getV1CurrentRoute } from '../src/app/v1/routes/current/route';
 import { POST as createV1Fact } from '../src/app/v1/facts/route';
+import { POST as extractCandidateFacts } from '../src/app/api/ai/extract/route';
+import { AIGateway } from '../src/services/ai/Gateway';
 
 const integration = describe.skipIf(!process.env.POSTGRES_URL);
 const DEMONSTRATION_SCENARIO_IDS = [
@@ -69,6 +74,7 @@ function seedRequest(scenarioId: (typeof DEMONSTRATION_SCENARIO_IDS)[number]) {
 integration('API lifecycle and history integration', () => {
   beforeAll(async () => {
     await db.delete(auditEvents);
+    await db.delete(accountDeletionReceipts);
     await db.delete(apiRateLimits);
     await db.delete(idempotencyRecords);
     await db.delete(factEvents);
@@ -282,6 +288,12 @@ integration('API lifecycle and history integration', () => {
     const completedRoute = await (await getRoute()).json();
     expect(completedRoute.route.status).toBe('COMPLETED');
     expect(completedRoute.route.focusActionId).toBeNull();
+    expect(completedRoute.versions).toEqual({
+      application: '1.2.0',
+      schema: '0005_sloppy_tag',
+      engine: 'release-1.0',
+      ruleSet: 'release-1.0',
+    });
   });
 
   it('rejects an unknown demonstration scenario without replacing the current Route', async () => {
@@ -292,6 +304,38 @@ integration('API lifecycle and history integration', () => {
     expect(response.status).toBe(400);
     const after = await (await getRoute()).json();
     expect(after.route.id).toBe(before.route.id);
+  });
+
+  it('deduplicates repeated extracted Actions without failing the candidate batch', async () => {
+    const extraction = vi.spyOn(AIGateway, 'extractCandidateFacts').mockResolvedValueOnce([
+      {
+        factType: 'ACTION',
+        title: 'Attend orientation',
+        description: 'Bring the appointment letter.',
+        sourceText: 'Attend orientation and bring this letter.',
+        confidence: 95,
+      },
+      {
+        factType: 'ACTION',
+        title: 'Attend orientation',
+        description: 'Bring the appointment letter.',
+        sourceText: 'Attend orientation and bring this letter.',
+        confidence: 95,
+      },
+    ]);
+
+    const response = await extractCandidateFacts(
+      jsonRequest('/api/ai/extract', {
+        text: 'Attend orientation and bring this letter.',
+        idempotencyKey: crypto.randomUUID(),
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.facts).toHaveLength(1);
+    expect(body.omittedCandidates).toBe(1);
+    extraction.mockRestore();
   });
 
   it('requires explicit confirmation before replacing existing Route data', async () => {
@@ -487,6 +531,51 @@ integration('API lifecycle and history integration', () => {
     expect(replacementSources[0].id).toBe(provenanceId);
   });
 
+  it('ATC-004 detects Provenance tampering without leaking the stored value', async () => {
+    const created = await createV1Provenance(
+      jsonRequest('/v1/provenance', {
+        source_type: 'USER_ENTRY',
+        source_reference: 'Integrity fixture',
+        idempotency_key: 'tampered-provenance',
+      })
+    );
+    const provenanceId = (await created.json()).provenance.provenance_id as string;
+    await db.update(provenance).set({ integrityHash: 'tampered' }).where(eq(provenance.id, provenanceId));
+    const response = await validateV1Provenance(
+      jsonRequest(`/v1/provenance/${provenanceId}/validate`, {}),
+      { params: Promise.resolve({ provenanceId }) }
+    );
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      valid: false,
+      integrity_status: 'INVALID',
+      validation_errors: ['INTEGRITY_HASH_MISMATCH'],
+    });
+    expect(JSON.stringify(body)).not.toContain('Integrity fixture');
+  });
+
+  it('ATC-007 refuses a corrupted latest GraphVersion and serves the prior valid publication', async () => {
+    expect((await seedDemo(seedRequest('SD-001'))).status).toBe(200);
+    const current = await (await getRoute()).json();
+    const [latest] = await db
+      .select()
+      .from(graphVersions)
+      .where(eq(graphVersions.userId, USER_ID))
+      .orderBy(graphVersions.sequenceNumber)
+      .limit(1);
+    // Select the actual latest row explicitly after the baseline query keeps
+    // the test independent of timestamp resolution.
+    const all = await db.select().from(graphVersions).where(eq(graphVersions.userId, USER_ID));
+    const newest = all.sort((a, b) => b.sequenceNumber - a.sequenceNumber)[0];
+    expect(newest).toBeDefined();
+    await db.update(graphVersions).set({ inputSnapshotHash: 'corrupted' }).where(eq(graphVersions.id, newest.id));
+    const recovered = await getRoute();
+    expect(recovered.status).toBe(200);
+    expect((await recovered.json()).route.id).not.toBe(current.route.id);
+    expect(latest).toBeDefined();
+  });
+
   it('expires a Confirmed Fact and excludes it from the current Route', async () => {
     const proposed = await mutateFact(
       jsonRequest('/api/facts', {
@@ -623,8 +712,14 @@ integration('API lifecycle and history integration', () => {
     const receipts = await db
       .select()
       .from(auditEvents)
-      .where(eq(auditEvents.resourceId, deletionUserId));
+      .where(eq(auditEvents.resourceId, sha256(deletionUserId)));
     expect(receipts.some(receipt => receipt.eventType === 'ACCOUNT_DELETION_COMPLETED')).toBe(true);
+    const deletionLedger = await db
+      .select()
+      .from(accountDeletionReceipts)
+      .where(eq(accountDeletionReceipts.subjectHash, sha256(deletionUserId)));
+    expect(deletionLedger).toHaveLength(1);
+    expect(JSON.stringify(deletionLedger)).not.toContain(deletionUserId);
     authenticatedUserId = USER_ID;
   });
 });

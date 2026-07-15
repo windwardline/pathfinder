@@ -13,18 +13,18 @@ from urllib.parse import unquote, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED_COUNTS = {
-    "docs/00-governance": 6,
+    "docs/00-governance": 7,
     "docs/01-product": 4,
     "docs/02-architecture": 6,
-    "docs/03-research": 4,
+    "docs/03-research": 5,
     "docs/04-risk": 3,
-    "docs/05-decisions": 5,
+    "docs/05-decisions": 7,
     "docs/06-development": 6,
     "docs/07-api": 5,
     "docs/08-data": 4,
-    "docs/09-testing": 5,
-    "docs/10-operations": 6,
-    "docs/11-implementation": 9,
+    "docs/09-testing": 6,
+    "docs/10-operations": 7,
+    "docs/11-implementation": 10,
 }
 
 REQUIRED_DIRECTORIES = (
@@ -126,8 +126,8 @@ def validate() -> list[str]:
                 f"{relative} contains {len(files)} Markdown files; expected {expected_count}"
             )
 
-    if len(corpus_files) != 63:
-        errors.append(f"canonical corpus contains {len(corpus_files)} files; expected 63")
+    if len(corpus_files) != 70:
+        errors.append(f"canonical corpus contains {len(corpus_files)} files; expected 70")
 
     direct_docs = sorted((ROOT / "docs").glob("*.md"))
     if direct_docs:
@@ -176,7 +176,7 @@ def main() -> int:
         return 1
 
     print("Documentation validation passed")
-    print("- 63 canonical Markdown files")
+    print("- 70 canonical Markdown files")
     print("- 12 indexed documentation categories")
     print("- protected architecture and trust language present")
     print("- local Markdown links resolve")

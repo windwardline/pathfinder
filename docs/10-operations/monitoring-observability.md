@@ -68,6 +68,10 @@ Services expose health endpoints verifying:
 - configuration validity
 - Route Engine readiness
 
+Route Engine readiness must execute the real deterministic graph and routing
+path against an embedded, non-user canary. A hard-coded readiness flag is not
+sufficient.
+
 Health checks must not expose sensitive internals.
 
 ## Alerts

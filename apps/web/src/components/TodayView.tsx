@@ -93,7 +93,12 @@ export function TodayView() {
         />
       )}
       {route.status === 'COMPLETED' && <EmptyState kind="route-completed" />}
-      {route.status === 'BLOCKED' && <EmptyState kind="route-blocked" />}
+      {route.status === 'BLOCKED' && (
+        <EmptyState
+          kind="route-blocked"
+          blockedSteps={route.steps.filter(step => step.status === 'BLOCKED')}
+        />
+      )}
 
       {focus && (
         <>

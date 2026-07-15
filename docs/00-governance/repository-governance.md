@@ -119,7 +119,8 @@ Supports:
 - branching-strategy.md
 - definition-of-done.md
 - release-management.md
-- ADR-001 through ADR-005
+- ADR-001 through ADR-006
+- PD-001
 
 ## Definition of Done
 

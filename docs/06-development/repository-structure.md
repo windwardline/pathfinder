@@ -180,7 +180,7 @@ The repository structure is complete when:
 
 Supports:
 
-- ADR-001 through ADR-005
+- ADR-001 through ADR-006 and applicable Product Decisions
 - coding-standards.md
 - system-overview.md
 - domain-model.md

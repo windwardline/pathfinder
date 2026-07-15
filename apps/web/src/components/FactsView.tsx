@@ -7,6 +7,8 @@ import { StatusBadge } from './StatusBadge';
 import { RerouteSummary } from './RerouteSummary';
 import { ErrorState } from './ErrorState';
 import { cn } from '@/lib/utils';
+import { buildFactCorrectionPayload } from '@/lib/fact-presentation';
+import { deriveDeadlineSeverity } from '@/lib/deadline-policy';
 
 /**
  * Fact Confirmation: the trust boundary made visible. Proposed Facts are
@@ -80,7 +82,7 @@ export function FactsView() {
 
   const beginCorrection = (fact: FactRecord) => {
     setCorrectingFactId(fact.id);
-    setCorrectionTitle(fact.payload?.value?.title ?? '');
+    setCorrectionTitle(factTitle(fact));
     setCorrectionDescription(fact.payload?.value?.description ?? '');
     setNotice(null);
   };
@@ -89,14 +91,12 @@ export function FactsView() {
     setBusyFactId(factId);
     setNotice(null);
     try {
-      await api.supersedeFact(factId, {
-        key: 'ACTION',
-        value: {
-          title: correctionTitle.trim(),
-          description: correctionDescription.trim(),
-          status: 'OPEN',
-        },
-      });
+      const current = facts?.find(fact => fact.id === factId);
+      if (!current?.payload) throw new Error('The current Fact could not be loaded.');
+      await api.supersedeFact(
+        factId,
+        buildFactCorrectionPayload(current.payload, correctionTitle, correctionDescription)
+      );
       await refresh();
       setCorrectingFactId(null);
       setNotice(
@@ -217,12 +217,7 @@ export function FactsView() {
                     <span className="mt-0.5 block text-[11px] font-medium uppercase tracking-wide text-ink-faint">
                       {factTypeLabel(fact)}
                     </span>
-                    <span className="mt-0.5 block font-mono text-[11px] text-ink-faint">
-                    {(fact.provenance ?? [])
-                      .map(p => p.source)
-                      .filter((s, i, arr) => arr.indexOf(s) === i)
-                      .join(' · ') || 'no provenance'}
-                    </span>
+                    <ProvenanceDetails fact={fact} />
                   </span>
                   <StatusBadge
                     status={fact.payload?.value?.status === 'COMPLETED' ? 'COMPLETED' : 'CONFIRMED'}
@@ -230,8 +225,7 @@ export function FactsView() {
                 </div>
                 {fact.payload?.value?.status !== 'COMPLETED' && (
                   <div className="mt-3 flex flex-wrap gap-2 border-t border-hairline pt-3">
-                    {fact.payload?.key === 'ACTION' && (
-                      <button
+                    <button
                         onClick={() => beginCorrection(fact)}
                         disabled={busyFactId === fact.id}
                         className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-ink-soft hover:bg-raised disabled:opacity-50"
@@ -239,7 +233,6 @@ export function FactsView() {
                         <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                         Correct
                       </button>
-                    )}
                     <button
                       onClick={() => expire(fact.id)}
                       disabled={busyFactId === fact.id}
@@ -256,7 +249,7 @@ export function FactsView() {
                       Your correction will start as a Proposed Fact. The current version remains active until you confirm the replacement.
                     </p>
                     <label className="mt-3 block text-xs text-ink-soft" htmlFor={`correction-title-${fact.id}`}>
-                      Corrected Action
+                      Corrected {factTypeLabel(fact)}
                     </label>
                     <input
                       id={`correction-title-${fact.id}`}
@@ -265,16 +258,20 @@ export function FactsView() {
                       maxLength={120}
                       className="mt-1 w-full rounded-lg border border-hairline bg-paper px-3 py-2 text-sm focus:border-spruce focus:outline-none"
                     />
-                    <label className="mt-3 block text-xs text-ink-soft" htmlFor={`correction-description-${fact.id}`}>
-                      Helpful context
-                    </label>
-                    <input
-                      id={`correction-description-${fact.id}`}
-                      value={correctionDescription}
-                      onChange={event => setCorrectionDescription(event.target.value)}
-                      maxLength={500}
-                      className="mt-1 w-full rounded-lg border border-hairline bg-paper px-3 py-2 text-sm focus:border-spruce focus:outline-none"
-                    />
+                    {fact.payload?.key === 'ACTION' && (
+                      <>
+                        <label className="mt-3 block text-xs text-ink-soft" htmlFor={`correction-description-${fact.id}`}>
+                          Helpful context
+                        </label>
+                        <input
+                          id={`correction-description-${fact.id}`}
+                          value={correctionDescription}
+                          onChange={event => setCorrectionDescription(event.target.value)}
+                          maxLength={500}
+                          className="mt-1 w-full rounded-lg border border-hairline bg-paper px-3 py-2 text-sm focus:border-spruce focus:outline-none"
+                        />
+                      </>
+                    )}
                     <div className="mt-3 flex gap-2">
                       <button
                         onClick={() => submitCorrection(fact.id)}
@@ -401,6 +398,7 @@ function ProposedFactCard({
         {source === 'ai_extraction' ? 'Extracted by AI' : 'Entered by you'}
         {confidence != null && ` · confidence ${confidence}/100 — confidence is not confirmation`}
       </p>
+      <ProvenanceDetails fact={fact} />
 
       <div className="mt-4 flex items-center gap-2.5">
         <button
@@ -422,6 +420,50 @@ function ProposedFactCard({
       </div>
     </li>
   );
+}
+
+function ProvenanceDetails({ fact }: { fact: FactRecord }) {
+  const records = fact.provenance ?? [];
+  if (records.length === 0) {
+    return <span className="mt-1 block text-[11px] text-ink-faint">Provenance unavailable</span>;
+  }
+  return (
+    <details className="mt-2 text-xs text-ink-soft">
+      <summary className="cursor-pointer text-spruce underline-offset-2 hover:underline">
+        View supporting evidence ({records.length})
+      </summary>
+      <ol className="mt-2 space-y-2 rounded-lg bg-raised p-3">
+        {records.map(record => (
+          <li key={record.id}>
+            <p className="font-medium text-ink">{provenanceLabel(record.source)}</p>
+            <p className="mt-0.5 text-ink-faint">
+              {record.sourceType.replaceAll('_', ' ').toLocaleLowerCase('en-US')}
+              {' · '}
+              {new Date(record.createdAt).toLocaleString()}
+            </p>
+            {record.confidence != null && (
+              <p className="mt-0.5">Extraction confidence {record.confidence}/100; confidence is not confirmation.</p>
+            )}
+            <p className="mt-0.5 font-mono text-[10px] text-ink-faint">
+              Integrity {record.integrityHash.slice(0, 12)}…
+            </p>
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+
+function provenanceLabel(source: string) {
+  const labels: Record<string, string> = {
+    ai_extraction: 'Document text you chose to process',
+    user_input: 'Information you entered',
+    user_confirmation: 'Your confirmation',
+    user_correction: 'Your correction',
+    user_completion: 'Your completion update',
+    seed_demonstration: 'Fictional demonstration source',
+  };
+  return labels[source] ?? source.replaceAll('_', ' ');
 }
 
 type ManualFactKind = 'ACTION' | 'GOAL' | 'REQUIREMENT' | 'CONSTRAINT' | 'OBLIGATION' | 'DEADLINE' | 'BLOCKER';
@@ -448,11 +490,14 @@ function CaptureBox({ facts, onCaptured }: { facts: FactRecord[]; onCaptured: ()
   const [priority, setPriority] = useState(50);
   const [constraintType, setConstraintType] = useState('TRANSPORTATION');
   const [hardness, setHardness] = useState('HARD');
-  const [severity, setSeverity] = useState('MODERATE');
   const [dateTime, setDateTime] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
+  const [manualStep, setManualStep] = useState<1 | 2 | 3>(1);
+  const [guidedIntake] = useState(
+    () => facts.filter(fact => fact.payload?.key !== 'DEPENDENCY').length === 0
+  );
   const actionOptions = facts.filter(
     fact => fact.status === 'CONFIRMED' && fact.payload?.key === 'ACTION' && fact.payload.value.status !== 'COMPLETED'
   );
@@ -521,7 +566,7 @@ function CaptureBox({ facts, onCaptured }: { facts: FactRecord[]; onCaptured: ()
         value: {
           title: cleanTitle,
           dueAt: new Date(dateTime).toISOString(),
-          severity,
+          severity: deriveDeadlineSeverity(new Date(dateTime).toISOString()),
           targetActionId,
         },
       };
@@ -544,14 +589,16 @@ function CaptureBox({ facts, onCaptured }: { facts: FactRecord[]; onCaptured: ()
     setIsError(false);
     try {
       if (mode === 'paste') {
-        const { facts } = await api.extract(text);
+        const { facts, omittedCandidates } = await api.extract(text);
         await onCaptured();
         setText('');
-        setMessage(
-          facts.length === 0
-            ? 'No actions were found in that text. You can add one manually instead.'
-            : `${facts.length} Proposed ${facts.length === 1 ? 'Fact' : 'Facts'} ready for your review below.`
-        );
+        const savedMessage = facts.length === 0
+          ? 'No supported facts were found in that text. You can add one manually instead.'
+          : `${facts.length} Proposed ${facts.length === 1 ? 'Fact' : 'Facts'} ready for your review below.`;
+        const omittedMessage = omittedCandidates > 0
+          ? ` ${omittedCandidates} relationship ${omittedCandidates === 1 ? 'candidate needs' : 'candidates need'} manual review because no matching Action was extracted.`
+          : '';
+        setMessage(`${savedMessage}${omittedMessage}`);
       } else {
         await api.proposeFact(buildManualPayload());
         await onCaptured();
@@ -562,6 +609,7 @@ function CaptureBox({ facts, onCaptured }: { facts: FactRecord[]; onCaptured: ()
         setGoalId('');
         setDateTime('');
         setMessage('Added as a Proposed Fact — review it below.');
+        if (guidedIntake) setManualStep(3);
       }
     } catch (e) {
       setIsError(true);
@@ -614,7 +662,8 @@ function CaptureBox({ facts, onCaptured }: { facts: FactRecord[]; onCaptured: ()
         >
           <label htmlFor="capture-text" className="mt-4 block text-sm text-ink-soft">
             Paste a job offer, housing letter, supervision schedule, or ID guidance. Pathfinder
-            extracts the actions it finds as Proposed Facts for your review.
+            extracts supported candidate Facts for your review. Every result remains Proposed
+            until you confirm it.
           </label>
           <textarea
             id="capture-text"
@@ -633,6 +682,24 @@ function CaptureBox({ facts, onCaptured }: { facts: FactRecord[]; onCaptured: ()
           aria-labelledby="capture-tab-manual"
           className="mt-4 space-y-3"
         >
+          {guidedIntake && (
+            <div className="rounded-xl bg-raised px-4 py-3">
+              <p className="text-xs font-medium uppercase tracking-widest text-ink-faint">
+                Guided intake · Step {manualStep} of 3
+              </p>
+              <p className="mt-1 text-sm text-ink-soft">
+                {manualStep === 1 && 'Choose the kind of information you want to add.'}
+                {manualStep === 2 && 'Describe it clearly. It will remain Proposed until you review it.'}
+                {manualStep === 3 && 'Review the Proposed Fact below and confirm it only if it is accurate.'}
+              </p>
+            </div>
+          )}
+          {guidedIntake && manualStep === 3 ? (
+            <a href="#proposed-heading" className="inline-flex rounded-lg bg-spruce px-4 py-2 text-sm font-medium text-paper">
+              Review the Proposed Fact
+            </a>
+          ) : (
+            <>
           <div>
             <label htmlFor="manual-kind" className="block text-sm text-ink-soft">
               What are you adding?
@@ -649,13 +716,25 @@ function CaptureBox({ facts, onCaptured }: { facts: FactRecord[]; onCaptured: ()
               className="mt-1.5 w-full rounded-xl border border-hairline bg-paper px-4 py-2.5 text-sm focus:border-spruce focus:outline-none"
             >
               {MANUAL_FACT_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
               ))}
             </select>
             <p className="mt-1.5 text-xs text-ink-faint">
               {MANUAL_FACT_OPTIONS.find(option => option.value === kind)?.help}
             </p>
           </div>
+          {guidedIntake && manualStep === 1 ? (
+            <button
+              type="button"
+              onClick={() => setManualStep(2)}
+              className="rounded-lg bg-spruce px-4 py-2 text-sm font-medium text-paper"
+            >
+              Continue to describe this Fact
+            </button>
+          ) : (
+            <>
           <div>
             <label htmlFor="manual-title" className="block text-sm text-ink-soft">
               {kind === 'ACTION' ? 'What needs to happen?' : kind === 'GOAL' ? 'What outcome are you working toward?' : 'Describe this Fact'}
@@ -728,12 +807,10 @@ function CaptureBox({ facts, onCaptured }: { facts: FactRecord[]; onCaptured: ()
             </label>
           )}
 
-          {kind === 'DEADLINE' && (
-            <label htmlFor="manual-severity" className="block text-sm text-ink-soft">How strongly should this deadline affect the Route?
-              <select id="manual-severity" value={severity} onChange={event => setSeverity(event.target.value)} className="mt-1.5 block w-full rounded-xl border border-hairline bg-paper px-4 py-2.5 text-sm focus:border-spruce focus:outline-none">
-                <option value="LOW">Low</option><option value="MODERATE">Moderate</option><option value="HIGH">High</option><option value="CRITICAL">Critical</option>
-              </select>
-            </label>
+          {kind === 'DEADLINE' && dateTime && (
+            <p className="rounded-lg bg-raised px-3 py-2 text-xs leading-relaxed text-ink-soft">
+              Pathfinder derives urgency from the confirmed due date. You never need to rank it yourself.
+            </p>
           )}
 
           {needsDate && (
@@ -742,9 +819,14 @@ function CaptureBox({ facts, onCaptured }: { facts: FactRecord[]; onCaptured: ()
               <input id="manual-date-time" type="datetime-local" value={dateTime} onChange={event => setDateTime(event.target.value)} className="mt-1.5 block w-full rounded-xl border border-hairline bg-paper px-4 py-2.5 text-sm focus:border-spruce focus:outline-none" />
             </label>
           )}
+            </>
+          )}
+            </>
+          )}
         </div>
       )}
 
+      {(mode === 'paste' || !guidedIntake || manualStep === 2) && (
       <div className="mt-4 flex items-center justify-between gap-4">
         <p className="text-xs text-ink-faint">
           Everything you add starts as a Proposed Fact. Nothing affects your Route until you
@@ -761,12 +843,13 @@ function CaptureBox({ facts, onCaptured }: { facts: FactRecord[]; onCaptured: ()
               {mode === 'paste' ? 'Extracting…' : 'Adding…'}
             </>
           ) : mode === 'paste' ? (
-            'Extract actions'
+            'Extract Proposed Facts'
           ) : (
             'Add as Proposed Fact'
           )}
         </button>
       </div>
+      )}
 
       {message && (
         <p

@@ -25,7 +25,7 @@ Contributors should read, at minimum:
 - `product-principles.md`
 - `release-1.md`
 - `system-overview.md`
-- ADR-001 through ADR-005
+- ADR-001 through ADR-006 and applicable Product Decisions
 - `coding-standards.md`
 - `testing-strategy.md`
 - `definition-of-done.md`
@@ -129,7 +129,7 @@ Supports:
 - branching-strategy.md
 - coding-standards.md
 - definition-of-done.md
-- ADR-001 through ADR-005
+- ADR-001 through ADR-006 and applicable Product Decisions
 
 ## Definition of Done
 

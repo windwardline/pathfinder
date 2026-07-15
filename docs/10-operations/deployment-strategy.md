@@ -21,10 +21,9 @@ This document defines how Pathfinder Release 1 is deployed, promoted, verified, 
 | Environment | Purpose |
 |---|---|
 | Local | Developer implementation |
-| Development | Shared integration |
-| Test | Automated validation |
-| Staging | Release candidate verification |
-| Production | User-facing environment |
+| Test | GitHub Actions with throwaway Postgres and browser runtimes |
+| Staging | Vercel Preview deployment for the pull-request commit |
+| Production | Vercel deployment rebuilt from protected `main` |
 
 Configuration differences must be externalized; application behavior must remain consistent.
 
@@ -37,12 +36,16 @@ Configuration differences must be externalized; application behavior must remain
 5. Golden Route Fixtures
 6. Regression tests
 7. Adversarial tests
-8. Package artifacts
-9. Deploy to Staging
-10. Acceptance validation
-11. Production approval
-12. Production deployment
-13. Post-deployment verification
+8. Build the pull-request commit
+9. Deploy the Vercel Preview staging candidate
+10. Complete acceptance validation and protected review
+11. Merge the approved commit to `main`
+12. Let Vercel rebuild that commit for Production
+13. Verify release identity and public health
+
+Vercel rebuilds each environment. Release 1 therefore proves commit identity,
+lockfile identity, and build gates; it does not claim byte-identical artifact
+promotion.
 
 ## Release Gates
 
@@ -122,7 +125,7 @@ Supports:
 - definition-of-done.md
 - acceptance-test-specification.md
 - regression-test-catalog.md
-- ADR-001 through ADR-005
+- ADR-001 through ADR-006 and applicable Product Decisions
 
 ## Definition of Done
 

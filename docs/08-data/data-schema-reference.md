@@ -8,6 +8,25 @@
 
 This document defines the logical schema contracts for Pathfinder Release 1. It complements `data-architecture.md` by specifying entity fields, keys, relationships, lifecycle constraints, and persistence invariants.
 
+The table names below are logical contracts. Per ADR-006, the deployed Release
+1 physical schema uses compact Fact and immutable snapshot tables. The mapping
+is authoritative:
+
+| Logical contract | Release 1 physical representation |
+|---|---|
+| User | `user` plus Auth.js tables |
+| Provenance Record | `provenance` |
+| Fact and Fact Event | `fact`, `fact_event` |
+| Plan and domain entities | schema-validated `fact.factText` payloads |
+| Dependency Graph, nodes, and edges | immutable `graph_version.snapshotData` |
+| Route and Route Version | `routing_snapshot` linked to `graph_version` |
+| Route Step and explanation | deterministically reconstructed from the immutable snapshot |
+| Reroute Event | `reroute_event` with structured `differenceData` |
+| Deletion propagation | `account_deletion_receipt` pseudonymous ledger |
+
+The normalized contracts remain the migration target only if a future ADR
+establishes that the compact projection no longer satisfies product needs.
+
 ## Conventions
 
 - Primary keys use UUIDs.

@@ -150,7 +150,7 @@ Supports:
 - PRD
 - Release 1 Specification
 - Version 2 Design Freeze
-- ADR-001 through ADR-005
+- ADR-001 through ADR-006 and applicable Product Decisions
 - API specifications
 - Data specifications
 - Testing specifications

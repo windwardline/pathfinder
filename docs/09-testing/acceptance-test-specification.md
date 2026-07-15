@@ -98,7 +98,7 @@ Supports:
 - golden-route-fixtures.md
 - seeded-demonstration-scenarios.md
 - testing-strategy.md
-- ADR-001 through ADR-005
+- ADR-001 through ADR-006 and applicable Product Decisions
 
 ## Definition of Done
 

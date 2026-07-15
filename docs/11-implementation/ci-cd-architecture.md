@@ -15,7 +15,8 @@ The CI/CD system must enforce the Version 2 Design Freeze rather than merely aut
 - `main` is always releasable.
 - Every change is validated before merge.
 - Build artifacts are immutable.
-- The same artifact is promoted across environments.
+- The same reviewed commit and lockfile are used across environments; Vercel
+  rebuilds each deployment and Release 1 does not claim byte-identical promotion.
 - Deterministic Route behavior is a release gate.
 - Database and infrastructure changes are version controlled.
 - Deployment is automated, observable, and reversible.
@@ -177,7 +178,7 @@ Release artifacts must be:
 - checksummed
 - traceable to source
 - stored in an approved registry
-- promoted rather than rebuilt between environments
+- traceable to the exact reviewed commit and lockfile
 
 Artifacts may include:
 
@@ -190,23 +191,23 @@ Artifacts may include:
 
 ## Environment Promotion
 
-Recommended promotion flow:
+Release 1 delivery flow:
 
 ```text
-Development → Test → Staging → Production
+Pull request → GitHub Actions → Vercel Preview → protected merge → Vercel Production
 ```
 
-Promotion requires:
+Progression requires:
 
 - successful prior stage
-- approved artifact
+- approved commit
 - environment configuration validation
 - migration readiness
 - no unresolved release-blocking defects
 
 ## Staging Validation
 
-Staging must approximate Production behavior closely enough to validate:
+Vercel Preview is the Release 1 staging boundary. It must approximate Production behavior closely enough to validate:
 
 - deployment
 - migrations
@@ -220,7 +221,7 @@ Staging must approximate Production behavior closely enough to validate:
 
 ## Production Approval
 
-Production deployment requires:
+Production deployment requires a protected merge with:
 
 - Release Manager approval
 - Product confirmation of scope
@@ -443,10 +444,10 @@ The CI/CD architecture is complete when:
 1. Every pull request runs required quality checks.
 2. Golden Route Fixtures and regression suites are enforced.
 3. Security and adversarial gates are automated.
-4. Build artifacts are immutable and promoted between environments.
-5. Staging validation precedes Production.
+4. Every deployment reports the exact commit and release identity; rebuilds use the locked dependency graph.
+5. Vercel Preview validation precedes protected merge and Production.
 6. Database and infrastructure changes are version controlled.
-7. Production requires explicit approval.
+7. Production requires the repository's protected pull-request approval and checks.
 8. Rollback is documented and tested.
 9. Post-deployment verification includes Route and Reroute behavior.
 10. Release evidence is retained.
@@ -473,7 +474,7 @@ Supports:
 - backend-architecture.md
 - frontend-architecture.md
 - ai-services-architecture.md
-- ADR-001 through ADR-005
+- ADR-001 through ADR-006 and applicable Product Decisions
 
 ## Definition of Done
 

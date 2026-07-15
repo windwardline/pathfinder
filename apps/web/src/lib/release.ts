@@ -1,5 +1,5 @@
 export const APP_VERSION = '1.2.0';
-export const SCHEMA_VERSION = '0004_unknown_diamondback';
+export const SCHEMA_VERSION = '0005_sloppy_tag';
 
 /** Safe build identity for release verification and incident correlation. */
 export function releaseIdentity() {

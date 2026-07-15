@@ -225,6 +225,7 @@ export class RouteEngine {
         provenance: action.provenance,
         deadline: action.routing?.deadline,
         mandatoryObligation: action.routing?.mandatoryObligation,
+        constraintIds: [...(graph.actionConstraintIds.get(id) ?? [])].sort(),
       });
     }
 
@@ -249,6 +250,7 @@ export class RouteEngine {
         provenance: action.provenance,
         deadline: action.routing?.deadline,
         mandatoryObligation: action.routing?.mandatoryObligation,
+        constraintIds: [...(graph.actionConstraintIds.get(id) ?? [])].sort(),
       });
     }
 

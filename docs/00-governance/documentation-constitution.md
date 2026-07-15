@@ -11,8 +11,8 @@ documentation.
 
 ## Authority
 
-1.  The Version 2 Design Freeze is the current canonical product
-    definition.
+1.  The [Version 2 Design Freeze](version-2-design-freeze.md) is the current
+    canonical product definition.
 2.  This Constitution governs documentation structure and change
     management.
 3.  Product Decisions and Architecture Decision Records (ADRs) are the

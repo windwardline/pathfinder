@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { correlationId } from '@/lib/api-response';
 import { ENGINE_VERSION, RULE_SET_VERSION } from '@/lib/route-service';
 import { releaseIdentity } from '@/lib/release';
+import { runRouteEngineCanary } from '@/lib/route-engine-canary';
 
 /** Public, non-sensitive readiness check for deployment and incident verification. */
 export async function GET(request?: Request) {
@@ -19,7 +20,13 @@ export async function GET(request?: Request) {
   const configuration = Boolean(
     (process.env.POSTGRES_URL || process.env.DATABASE_URL) && process.env.AUTH_SECRET
   );
-  const ready = database && configuration;
+  let routeEngine = false;
+  try {
+    routeEngine = runRouteEngineCanary().ready;
+  } catch (error) {
+    console.error('Health Route Engine canary failed:', error);
+  }
+  const ready = database && configuration && routeEngine;
   const response = NextResponse.json(
     {
       status: ready ? 'ready' : 'not_ready',
@@ -28,7 +35,7 @@ export async function GET(request?: Request) {
         application: true,
         database,
         configuration,
-        route_engine: true,
+        route_engine: routeEngine,
       },
       versions: {
         ...releaseIdentity(),
