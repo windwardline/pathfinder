@@ -55,25 +55,25 @@ try {
           missing_versions: missingVersions,
           correlation_id: body.correlation_id ?? null,
         });
-        return;
+      } else {
+        console.log(
+          JSON.stringify({
+            timestamp: new Date().toISOString(),
+            service: 'pathfinder-production',
+            operation: 'health_verification',
+            severity: 'info',
+            outcome: 'ready',
+            http_status: response.status,
+            duration_ms: durationMs,
+            correlation_id: body.correlation_id ?? null,
+            application_version: versions.application,
+            commit_reference: versions.commit,
+            schema_version: versions.schema,
+            engine_version: versions.engine,
+            rule_set_version: versions.rule_set,
+          })
+        );
       }
-      console.log(
-        JSON.stringify({
-          timestamp: new Date().toISOString(),
-          service: 'pathfinder-production',
-          operation: 'health_verification',
-          severity: 'info',
-          outcome: 'ready',
-          http_status: response.status,
-          duration_ms: durationMs,
-          correlation_id: body.correlation_id ?? null,
-          application_version: versions.application,
-          commit_reference: versions.commit,
-          schema_version: versions.schema,
-          engine_version: versions.engine,
-          rule_set_version: versions.rule_set,
-        })
-      );
     }
   }
 } catch (error) {
