@@ -27,6 +27,68 @@ Testing must prove that:
 - Require regression protection for every routing change.
 - Test normal, empty, blocked, error, and adversarial states.
 
+## Documented TDD Feature — Selectable Demonstration Scenarios
+
+One Release 1 feature is preserved as an explicit red → green → refactor
+case study for instructor review: selecting any canonical seeded demonstration
+scenario from SD-001 through SD-010.
+
+### Requirement
+
+The feature derives from `seeded-demonstration-scenarios.md`: every canonical
+scenario must start from a known fictional dataset, be selectable without
+manual database manipulation, and preserve the Confirmed Fact trust boundary.
+
+### Red
+
+Commit `cccfa2f` added the specification before the implementation. The focused
+integration run produced three expected failures:
+
+- the endpoint did not return the requested scenario identifier,
+- SD-008 contained no Proposed Fact,
+- and an unknown scenario identifier returned success instead of a validation error.
+
+Reproduction command:
+
+```bash
+POSTGRES_URL=postgres://localhost:5432/pathfinder_review \
+AUTH_SECRET=<local-test-secret> \
+pnpm --filter web test -- tests/api-lifecycle.integration.test.ts
+```
+
+### Green
+
+Commit `b267351` added the smallest complete implementation: a validated
+scenario-selection contract, fictional fixtures for SD-001 through SD-010,
+the empty-state selector, and preservation of Proposed-Fact isolation.
+
+The focused result was 14 passing integration tests. The browser suite also
+passed four tests covering the default demonstration, Proposed Fact
+confirmation, SD-010 selection, and the 390px experience.
+
+### Refactor
+
+Public scenario labels and objectives are isolated in
+`apps/web/src/lib/demo-scenario-catalog.ts`. Dependency fixtures remain in the
+server-imported `apps/web/src/lib/demo-scenarios.ts`; the client does not receive
+Dependency Graph structure. This preserves ADR-005 while keeping the UI catalog
+easy to review.
+
+### Evidence Map
+
+| Evidence | Repository location |
+|---|---|
+| Canonical scenarios | `docs/09-testing/seeded-demonstration-scenarios.md` |
+| Test-first specification | `apps/web/tests/api-lifecycle.integration.test.ts` |
+| Browser acceptance | `apps/web/tests/e2e/release-1.spec.ts` |
+| Validated seed endpoint | `apps/web/src/app/api/demo/seed/route.ts` |
+| Metadata-only UI catalog | `apps/web/src/lib/demo-scenario-catalog.ts` |
+| Server-side fixtures | `apps/web/src/lib/demo-scenarios.ts` |
+
+Only this feature is presented as the repository's formal TDD case study.
+Other automated tests remain ordinary regression, integration, security, or
+acceptance evidence.
+
 ## Testing Pyramid
 
 ### 1. Unit Tests

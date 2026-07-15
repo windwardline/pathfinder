@@ -41,6 +41,18 @@ import { GET as getV1CurrentRoute } from '../src/app/v1/routes/current/route';
 import { POST as createV1Fact } from '../src/app/v1/facts/route';
 
 const integration = describe.skipIf(!process.env.POSTGRES_URL);
+const DEMONSTRATION_SCENARIO_IDS = [
+  'SD-001',
+  'SD-002',
+  'SD-003',
+  'SD-004',
+  'SD-005',
+  'SD-006',
+  'SD-007',
+  'SD-008',
+  'SD-009',
+  'SD-010',
+] as const;
 
 function jsonRequest(url: string, body: unknown) {
   return new Request(`http://localhost${url}`, {
@@ -177,7 +189,56 @@ integration('API lifecycle and history integration', () => {
     expect(initialEvent.difference).not.toBeNull();
   });
 
+  it('selects every canonical seeded demonstration scenario by ID', async () => {
+    for (const scenarioId of DEMONSTRATION_SCENARIO_IDS) {
+      const response = await seedDemo(
+        jsonRequest('/api/demo/seed', { scenarioId })
+      );
+      expect(response.status).toBe(200);
+      expect((await response.json()).scenarioId).toBe(scenarioId);
+    }
+  });
+
+  it('keeps the SD-008 Proposed Fact outside the Route and completes SD-010', async () => {
+    const proposedResponse = await seedDemo(
+      jsonRequest('/api/demo/seed', { scenarioId: 'SD-008' })
+    );
+    expect(proposedResponse.status).toBe(200);
+    const proposedRoute = await (await getRoute()).json();
+    expect(proposedRoute.proposedCount).toBeGreaterThan(0);
+    expect(
+      proposedRoute.route.steps.some(
+        (step: { title: string }) => step.title === 'Apply for a transit pass'
+      )
+    ).toBe(false);
+
+    const completedResponse = await seedDemo(
+      jsonRequest('/api/demo/seed', { scenarioId: 'SD-010' })
+    );
+    expect(completedResponse.status).toBe(200);
+    const completedRoute = await (await getRoute()).json();
+    expect(completedRoute.route.status).toBe('COMPLETED');
+    expect(completedRoute.route.focusActionId).toBeNull();
+  });
+
+  it('rejects an unknown demonstration scenario without replacing the current Route', async () => {
+    const before = await (await getRoute()).json();
+    const response = await seedDemo(
+      jsonRequest('/api/demo/seed', { scenarioId: 'SD-999' })
+    );
+    expect(response.status).toBe(400);
+    const after = await (await getRoute()).json();
+    expect(after.route.id).toBe(before.route.id);
+  });
+
   it('returns a stable current Route Version and rejects stale Reroute requests', async () => {
+    expect(
+      (
+        await seedDemo(
+          jsonRequest('/api/demo/seed', { scenarioId: 'SD-001' })
+        )
+      ).status
+    ).toBe(200);
     const first = await (await getRoute()).json();
     const second = await (await getRoute()).json();
     expect(second.route.id).toBe(first.route.id);

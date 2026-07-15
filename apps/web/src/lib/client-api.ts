@@ -167,7 +167,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ actionId, idempotencyKey: crypto.randomUUID() }),
     }),
-  seedDemo: () => request<{ seeded: number }>('/api/demo/seed', { method: 'POST' }),
+  seedDemo: (scenarioId = 'SD-001') =>
+    request<{ scenarioId: string; scenarioTitle: string; seeded: number }>('/api/demo/seed', {
+      method: 'POST',
+      body: JSON.stringify({ scenarioId }),
+    }),
   supersedeFact: (
     factId: string,
     replacementPayload: FactPayload,

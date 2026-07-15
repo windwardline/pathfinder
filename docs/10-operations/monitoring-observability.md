@@ -118,6 +118,21 @@ Following deployment verify:
 5. Reroute generation
 6. Seeded demonstration scenario
 
+## Automated Release 1 Health Verification
+
+`.github/workflows/production-health.yml` calls the public health endpoint four
+times per hour and can also be run manually. The verifier fails unless the
+application, database, configuration, and Route Engine checks are all ready.
+
+`scripts/verify_production_health.mjs` emits one structured, privacy-safe JSON
+event containing only operational status, latency, versions, and the endpoint's
+correlation identifier. It does not send user identifiers, Fact values, Route
+content, or document content.
+
+The workflow failure is the automation boundary. Notification services such as
+Zapier may subscribe to failed workflow runs, but must not receive Pathfinder
+user data or production credentials.
+
 ## Traceability
 
 Supports:

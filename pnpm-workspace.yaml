@@ -2,3 +2,8 @@ packages:
   - 'apps/*'
   - 'packages/*'
   - 'services/*'
+
+overrides:
+  '@auth/core>cookie': 0.7.2
+  '@esbuild-kit/core-utils>esbuild': 0.25.12
+  'next@16.2.10>postcss': 8.5.10
