@@ -57,6 +57,9 @@ htmlcov/
 .cache/
 .eslintcache
 .stylelintcache
+test-results/
+playwright-report/
+blob-report/
 
 # Infrastructure state and local overrides
 .terraform/
