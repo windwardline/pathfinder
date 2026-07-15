@@ -84,6 +84,11 @@ Release 1 is accepted only when:
 4. No unresolved Critical defects remain.
 5. Required documentation is synchronized.
 
+The pull-request CI pipeline executes the Chromium browser acceptance suite
+against a throwaway Postgres database after unit and integration tests. The
+suite verifies the seeded Focus Action, structured Reroute, Proposed-Fact trust
+boundary, Route History, SD-010 completed state, and the 390px experience.
+
 ## Traceability
 
 Supports:

@@ -57,6 +57,21 @@ Each scripted demonstration shall:
 5. Explain why changes occurred using canonical explanations.
 6. End with verification against expected results.
 
+## Release 1 Implementation Mapping
+
+The empty Today state exposes a selector for SD-001 through SD-010. Selecting a
+scenario sends its identifier to the authenticated demonstration seed endpoint,
+which replaces only the requesting user's fictional demonstration data.
+
+- Public labels and objectives: `apps/web/src/lib/demo-scenario-catalog.ts`
+- Server-side fictional fixtures: `apps/web/src/lib/demo-scenarios.ts`
+- Authenticated seed endpoint: `apps/web/src/app/api/demo/seed/route.ts`
+- Integration coverage: `apps/web/tests/api-lifecycle.integration.test.ts`
+- Browser acceptance: `apps/web/tests/e2e/release-1.spec.ts`
+
+Dependency fixtures remain server-side. Proposed Facts in SD-008 and SD-009
+remain excluded from Route generation until explicit confirmation.
+
 ## Success Criteria
 
 Every demonstration must verify:
