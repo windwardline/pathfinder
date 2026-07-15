@@ -3,6 +3,7 @@ import { db } from '@pathfinder/core';
 import { sql } from 'drizzle-orm';
 import { correlationId } from '@/lib/api-response';
 import { ENGINE_VERSION, RULE_SET_VERSION } from '@/lib/route-service';
+import { releaseIdentity } from '@/lib/release';
 
 /** Public, non-sensitive readiness check for deployment and incident verification. */
 export async function GET(request?: Request) {
@@ -30,6 +31,7 @@ export async function GET(request?: Request) {
         route_engine: true,
       },
       versions: {
+        ...releaseIdentity(),
         engine: ENGINE_VERSION,
         rule_set: RULE_SET_VERSION,
       },

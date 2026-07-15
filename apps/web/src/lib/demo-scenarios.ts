@@ -10,6 +10,7 @@ interface ScenarioAction {
   actionStatus: 'OPEN' | 'COMPLETED';
   factStatus?: 'PROPOSED' | 'CONFIRMED';
   sourceText?: string;
+  goalRef?: string;
   routing?: {
     criticalDeadline?: boolean;
     deadline?: string;
@@ -17,6 +18,57 @@ interface ScenarioAction {
     conflictAvoidance?: number;
     effortCost?: number;
   };
+}
+
+interface ScenarioGoal {
+  ref: string;
+  title: string;
+  status: 'ACTIVE' | 'ACHIEVED' | 'PAUSED' | 'ABANDONED';
+  priority: number;
+}
+
+interface ScenarioRequirement {
+  description: string;
+  status: 'UNSATISFIED' | 'SATISFIED' | 'WAIVED' | 'UNKNOWN';
+  hardness: 'HARD' | 'SOFT';
+  targetRef: string;
+  resolutionRef?: string;
+}
+
+interface ScenarioConstraint {
+  factStatus?: 'PROPOSED' | 'CONFIRMED';
+  constraintType: 'TIME' | 'TRANSPORTATION' | 'FINANCIAL' | 'LOCATION' | 'AVAILABILITY' | 'ACCESSIBILITY' | 'POLICY';
+  description: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'SUPERSEDED';
+  targetRefs: string[];
+  resolutionRef?: string;
+}
+
+interface ScenarioObligation {
+  factStatus?: 'PROPOSED' | 'CONFIRMED';
+  title: string;
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  startsInHours: number;
+  durationHours?: number;
+  conflictRefs?: string[];
+  resolutionRef?: string;
+}
+
+interface ScenarioDeadline {
+  factStatus?: 'PROPOSED' | 'CONFIRMED';
+  title: string;
+  dueInHours: number;
+  severity: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
+  targetRef: string;
+}
+
+interface ScenarioBlocker {
+  factStatus?: 'PROPOSED' | 'CONFIRMED';
+  targetRef: string;
+  reasonCode: string;
+  description: string;
+  active: boolean;
+  resolutionRef?: string;
 }
 
 interface ScenarioDependency {
@@ -30,6 +82,12 @@ export interface DemonstrationScenario {
   objective: string;
   actions: ScenarioAction[];
   dependencies: ScenarioDependency[];
+  goals?: ScenarioGoal[];
+  requirements?: ScenarioRequirement[];
+  constraints?: ScenarioConstraint[];
+  obligations?: ScenarioObligation[];
+  deadlines?: ScenarioDeadline[];
+  blockers?: ScenarioBlocker[];
 }
 
 const baseActions = (): ScenarioAction[] => [
@@ -129,8 +187,16 @@ export const DEMONSTRATION_SCENARIOS: DemonstrationScenario[] = [
         actionStatus: 'OPEN',
       },
     ],
-    dependencies: [
-      { prerequisiteRef: 'restore-transportation', dependentRef: 'employment-onboarding' },
+    dependencies: [],
+    constraints: [
+      {
+        factStatus: 'PROPOSED',
+        constraintType: 'TRANSPORTATION',
+        description: 'Reliable transportation is temporarily unavailable.',
+        status: 'ACTIVE',
+        targetRefs: ['employment-onboarding'],
+        resolutionRef: 'restore-transportation',
+      },
     ],
   },
   {
@@ -151,8 +217,16 @@ export const DEMONSTRATION_SCENARIOS: DemonstrationScenario[] = [
         actionStatus: 'OPEN',
       },
     ],
-    dependencies: [
-      { prerequisiteRef: 'denial-review', dependentRef: 'housing-application' },
+    dependencies: [],
+    blockers: [
+      {
+        factStatus: 'PROPOSED',
+        targetRef: 'housing-application',
+        reasonCode: 'HOUSING_DENIAL_REVIEW',
+        description: 'The fictional housing denial must be reviewed first.',
+        active: true,
+        resolutionRef: 'denial-review',
+      },
     ],
   },
   {
@@ -165,11 +239,7 @@ export const DEMONSTRATION_SCENARIOS: DemonstrationScenario[] = [
         title: 'Resolve the work schedule conflict',
         description: 'Coordinate the fictional work shift and supervision check-in.',
         actionStatus: 'OPEN',
-        routing: {
-          mandatoryObligation: true,
-          conflictAvoidance: 10,
-          effortCost: 10,
-        },
+        routing: { effortCost: 10 },
       },
       {
         ref: 'optional-worksheet',
@@ -180,6 +250,17 @@ export const DEMONSTRATION_SCENARIOS: DemonstrationScenario[] = [
       },
     ],
     dependencies: [],
+    obligations: [
+      {
+        factStatus: 'PROPOSED',
+        title: 'Attend the required supervision check-in',
+        status: 'ACTIVE',
+        startsInHours: 24,
+        durationHours: 1,
+        conflictRefs: ['optional-worksheet'],
+        resolutionRef: 'schedule-conflict',
+      },
+    ],
   },
   {
     id: 'SD-006',
@@ -191,10 +272,6 @@ export const DEMONSTRATION_SCENARIOS: DemonstrationScenario[] = [
         title: 'Submit time-sensitive paperwork',
         description: 'Submit the fictional paperwork before its Confirmed Deadline.',
         actionStatus: 'OPEN',
-        routing: {
-          criticalDeadline: true,
-          deadline: '2026-07-16T17:00:00.000Z',
-        },
       },
       {
         ref: 'orientation',
@@ -204,12 +281,21 @@ export const DEMONSTRATION_SCENARIOS: DemonstrationScenario[] = [
       },
     ],
     dependencies: [],
+    deadlines: [
+      {
+        factStatus: 'PROPOSED',
+        title: 'Paperwork submission deadline',
+        dueInHours: 48,
+        severity: 'CRITICAL',
+        targetRef: 'deadline-paperwork',
+      },
+    ],
   },
   {
     id: 'SD-007',
     title: 'Focus Action Completed',
     objective: 'Show advancement to the next Focus Action.',
-    actions: withStateIdCompleted(),
+    actions: baseActions(),
     dependencies: baseDependencies(),
   },
   {
@@ -250,6 +336,14 @@ export const DEMONSTRATION_SCENARIOS: DemonstrationScenario[] = [
     objective: 'Demonstrate successful completion of all Goals.',
     actions: baseActions().map(action => ({ ...action, actionStatus: 'COMPLETED' })),
     dependencies: baseDependencies(),
+    goals: [
+      {
+        ref: 'stable-reentry',
+        title: 'Establish a stable reentry foundation',
+        status: 'ACHIEVED',
+        priority: 100,
+      },
+    ],
   },
 ];
 

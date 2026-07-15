@@ -39,17 +39,17 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
           version: 10.34.5
           
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'pnpm'
           
       - name: Install dependencies
@@ -71,7 +71,7 @@ jobs:
         run: pnpm run test
 
       - name: Install browser acceptance runtime
-        run: pnpm --filter web exec playwright install --with-deps chromium
+        run: pnpm --filter web exec playwright install --with-deps chromium webkit
 
       - name: Run browser acceptance tests
         run: pnpm --filter web test:e2e

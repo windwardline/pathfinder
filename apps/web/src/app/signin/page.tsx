@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { Compass } from 'lucide-react';
 import { TopoBackdrop } from '@/components/TopoBackdrop';
 import { checkRateLimit } from '@/lib/rate-limit';
+import Link from 'next/link';
 
 export const metadata = { title: 'Sign in' };
 
@@ -36,6 +37,10 @@ export default async function SignInPage({
           <h1 className="max-w-md font-serif text-3xl leading-snug lg:text-[2.6rem] lg:leading-tight">
             Your reentry route: what comes next, why it comes next, and what it unlocks.
           </h1>
+          <p className="mt-5 max-w-md text-sm leading-relaxed text-paper/75">
+            Built for people rebuilding life after incarceration while navigating connected
+            requirements, barriers, deadlines, and opportunities.
+          </p>
           <ul className="mt-8 max-w-md space-y-3 text-sm leading-relaxed text-paper/85">
             <li>One clear Focus Action at a time — never an overwhelming list.</li>
             <li>Every step explains itself, backed by facts you confirmed.</li>
@@ -44,7 +49,7 @@ export default async function SignInPage({
         </div>
 
         <p className="relative mt-14 text-xs text-paper/60 lg:mt-0">
-          Your data belongs to you. Nothing is shared unless you share it.
+          Your Route is not disclosed to employers, service organizations, or public agencies.
         </p>
       </div>
 
@@ -100,6 +105,10 @@ export default async function SignInPage({
               Email me a sign-in link
             </button>
           </form>
+          <p className="mt-5 text-center text-xs leading-relaxed text-ink-faint">
+            By continuing, you can review how Pathfinder handles your information in its{' '}
+            <Link href="/privacy" className="text-spruce underline underline-offset-2">privacy and trust notice</Link>.
+          </p>
         </div>
       </div>
     </div>

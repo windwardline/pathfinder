@@ -122,7 +122,7 @@ export function TodayView() {
           )}
 
           <p className="mt-8 text-sm text-ink-faint">
-            <Link href="/route" className="text-spruce underline-offset-2 hover:underline">
+            <Link href="/route" className="text-spruce underline underline-offset-2">
               See your complete Route
             </Link>{' '}
             — every step, what&apos;s blocked, and why.

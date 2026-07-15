@@ -1,0 +1,46 @@
+name: Production alert
+
+on:
+  workflow_run:
+    workflows:
+      - Production health
+      - Recovery drill
+    types:
+      - completed
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: production-alert-${{ github.event.workflow_run.name }}
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+      RUN_URL: ${{ github.event.workflow_run.html_url }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Open or update the privacy-safe production alert
+        shell: bash
+        run: |
+          gh label create production-alert \
+            --color B42318 \
+            --description "Automated production or recovery alert" \
+            --force
+          title="Production alert: ${WORKFLOW_NAME} failed"
+          body=$(printf "The %s workflow failed.\n\n- Commit: %s\n- Run: %s\n- Detected: %s\n\nThis alert contains no Pathfinder user data, Fact values, documents, or credentials." \
+            "$WORKFLOW_NAME" "$HEAD_SHA" "$RUN_URL" "$(date -u +%Y-%m-%dT%H:%M:%SZ)")
+          existing=$(gh issue list --state open --label production-alert --search "$title in:title" --json number --jq ".[0].number // empty")
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body" --label production-alert
+          fi

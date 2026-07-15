@@ -18,6 +18,7 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { apiError, apiSuccess, correlationId } from '@/lib/api-response';
 import { recordAuditEvent } from '@/lib/audit';
 import { IdempotencyConflictError, withIdempotency } from '@/lib/idempotency';
+import { emitOperationalEvent } from '@/lib/telemetry';
 
 class ActionMutationError extends Error {
   constructor(
@@ -32,6 +33,7 @@ class ActionMutationError extends Error {
 /** Completes an Action and atomically publishes its structured Reroute. */
 export async function POST(request: Request) {
   const correlation = correlationId(request);
+  const startedAt = performance.now();
   const session = await auth();
   if (!session?.user?.id) {
     return apiError({
@@ -176,6 +178,17 @@ export async function POST(request: Request) {
       )
     );
 
+    emitOperationalEvent({
+      correlationId: correlation,
+      service: 'facts',
+      operation: 'action_completion',
+      outcome: 'success',
+      durationMs: performance.now() - startedAt,
+      httpStatus: 200,
+      mutation: 'complete',
+      factType: 'ACTION',
+      rerouteCreated: result.value.reroute != null,
+    });
     return apiSuccess(
       { ...result.value, idempotent_replay: result.replayed },
       request,
@@ -183,6 +196,16 @@ export async function POST(request: Request) {
       correlation
     );
   } catch (error) {
+    emitOperationalEvent({
+      correlationId: correlation,
+      service: 'facts',
+      operation: 'action_completion',
+      outcome: error instanceof ActionMutationError || error instanceof IdempotencyConflictError ? 'rejected' : 'failure',
+      durationMs: performance.now() - startedAt,
+      httpStatus: error instanceof ActionMutationError ? error.status : error instanceof IdempotencyConflictError ? 409 : 500,
+      mutation: 'complete',
+      factType: 'ACTION',
+    });
     if (error instanceof ActionMutationError) {
       return apiError({
         status: error.status,

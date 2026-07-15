@@ -4,6 +4,7 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db, accounts, sessions, users, verificationTokens } from "@pathfinder/core"
 import { toScannerSafeVerificationUrl } from "@/lib/magic-link"
 import { consumeVerificationToken } from "@/lib/verification-token"
+import { emitOperationalEvent } from "@/lib/telemetry"
 
 const baseAdapter = DrizzleAdapter(db, {
   usersTable: users,
@@ -20,11 +21,33 @@ const resendProvider = Resend({
 })
 
 const sendVerificationRequest = resendProvider.sendVerificationRequest
-resendProvider.sendVerificationRequest = params =>
-  sendVerificationRequest({
-    ...params,
-    url: toScannerSafeVerificationUrl(params.url),
-  })
+resendProvider.sendVerificationRequest = async params => {
+  const correlation = crypto.randomUUID()
+  const startedAt = performance.now()
+  try {
+    const result = await sendVerificationRequest({
+      ...params,
+      url: toScannerSafeVerificationUrl(params.url),
+    })
+    emitOperationalEvent({
+      correlationId: correlation,
+      service: "authentication",
+      operation: "magic_link_request",
+      outcome: "success",
+      durationMs: performance.now() - startedAt,
+    })
+    return result
+  } catch (error) {
+    emitOperationalEvent({
+      correlationId: correlation,
+      service: "authentication",
+      operation: "magic_link_request",
+      outcome: "failure",
+      durationMs: performance.now() - startedAt,
+    })
+    throw error
+  }
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: {

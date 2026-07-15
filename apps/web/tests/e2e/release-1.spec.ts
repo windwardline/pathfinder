@@ -1,8 +1,17 @@
 import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import { db, sessions, users } from '@pathfinder/core';
 import { eq } from 'drizzle-orm';
 
 const userIds = new Set<string>();
+
+async function expectNoSeriousAccessibilityViolations(page: import('@playwright/test').Page) {
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(
+    results.violations.filter(violation => ['serious', 'critical'].includes(violation.impact ?? '')),
+    results.violations.map(violation => `${violation.id}: ${violation.help}`).join('\n')
+  ).toEqual([]);
+}
 
 test.beforeEach(async ({ context }, testInfo) => {
   const suffix = `${testInfo.project.name}-${testInfo.workerIndex}-${crypto.randomUUID()}`;
@@ -109,6 +118,42 @@ test('AT-003 and AT-004: a Proposed Fact cannot affect the Route until confirmat
   await expect(added).toHaveText('Apply for a transit pass');
 });
 
+test('guided intake exposes every canonical user-facing Fact type', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Load the demonstration scenario' }).click();
+  await expect(page.getByRole('heading', { name: 'Obtain a state identification card' })).toBeVisible();
+  await page.getByRole('link', { name: 'Facts', exact: true }).click();
+  await page.getByRole('tab', { name: 'Add manually' }).click();
+
+  const factKind = page.getByLabel('What are you adding?');
+  await expect(factKind.locator('option')).toHaveText([
+    'An Action',
+    'A Goal',
+    'A Requirement',
+    'A Constraint',
+    'An Obligation',
+    'A Deadline',
+    'A Blocker',
+  ]);
+
+  await factKind.selectOption('CONSTRAINT');
+  await page.getByLabel('Describe this Fact').fill('Morning transportation is unavailable');
+  await page.getByLabel('Affected Action').selectOption({
+    label: 'Complete employment onboarding at Harbor Light Logistics',
+  });
+  await page.getByLabel('Action that can resolve this (optional)').selectOption({
+    label: 'Obtain a state identification card',
+  });
+  await page.getByRole('button', { name: 'Add as Proposed Fact' }).click();
+
+  await expect(page.getByText('Added as a Proposed Fact — review it below.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Morning transportation is unavailable' })).toBeVisible();
+  await expect(page.getByText('Constraint', { exact: true })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Today' }).click();
+  await expect(page.getByRole('heading', { name: 'Obtain a state identification card' })).toBeVisible();
+});
+
 test('seeded demonstration catalog selects the completed Route scenario', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Demonstration scenario').selectOption('SD-010');
@@ -118,6 +163,85 @@ test('seeded demonstration catalog selects the completed Route scenario', async 
   await expect(
     page.getByRole('heading', { name: 'Every Action on your Route is complete' })
   ).toBeVisible();
+});
+
+const scenarioFocusExpectations = [
+  ['SD-001', 'Obtain a state identification card'],
+  ['SD-002', 'Complete employment onboarding at Harbor Light Logistics'],
+  ['SD-003', 'Call your supervision officer'],
+  ['SD-004', 'Complete the housing application'],
+  ['SD-005', 'Complete an optional worksheet'],
+  ['SD-006', 'Attend orientation'],
+  ['SD-007', 'Obtain a state identification card'],
+  ['SD-008', 'Obtain a state identification card'],
+  ['SD-009', 'Obtain a state identification card'],
+] as const;
+
+for (const [scenarioId, focusTitle] of scenarioFocusExpectations) {
+  test(`${scenarioId}: canonical scenario opens with the expected Focus Action`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Demonstration scenario').selectOption(scenarioId);
+    await page.getByRole('button', { name: 'Load the demonstration scenario' }).click();
+    await expect(page.getByRole('heading', { name: focusTitle })).toBeVisible();
+  });
+}
+
+const proposedDomainScenarios = [
+  ['SD-003', 'Call your supervision officer', 'Reliable transportation is temporarily unavailable.', 'Restore transportation access'],
+  ['SD-004', 'Complete the housing application', 'The fictional housing denial must be reviewed first.', 'Request a housing denial review'],
+  ['SD-005', 'Complete an optional worksheet', 'Attend the required supervision check-in', 'Resolve the work schedule conflict'],
+  ['SD-006', 'Attend orientation', 'Paperwork submission deadline', 'Submit time-sensitive paperwork'],
+] as const;
+
+for (const [scenarioId, initialFocus, proposedTitle, expectedFocus] of proposedDomainScenarios) {
+  test(`${scenarioId}: confirming the canonical domain Fact produces the expected Reroute`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Demonstration scenario').selectOption(scenarioId);
+    await page.getByRole('button', { name: 'Load the demonstration scenario' }).click();
+    // The seed is an asynchronous client mutation. Synchronize on its visible
+    // outcome before navigating so the test exercises the resulting scenario.
+    await expect(page.getByRole('heading', { name: initialFocus })).toBeVisible();
+    await page.getByRole('link', { name: 'Facts', exact: true }).click();
+    const proposed = page.locator('li').filter({ has: page.getByRole('heading', { name: proposedTitle }) });
+    await proposed.getByRole('button', { name: 'Confirm' }).click();
+    await expect(page.getByRole('dialog', { name: 'You confirmed a fact' })).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: 'Back to your Route' }).click();
+    await page.getByRole('link', { name: 'Today' }).click();
+    await expect(page.getByRole('heading', { name: expectedFocus })).toBeVisible();
+  });
+}
+
+test('demonstration mode requires an explicit replacement confirmation', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Load the demonstration scenario' }).click();
+  await expect(page.getByRole('heading', { name: 'Obtain a state identification card' })).toBeVisible();
+  await page.getByRole('link', { name: 'Account' }).click();
+  await page.getByLabel('Scenario').selectOption('SD-010');
+  const load = page.getByRole('button', { name: 'Load this demonstration' });
+  await expect(load).toBeDisabled();
+  await page.getByLabel(/I understand this replaces my current Route data/).check();
+  await load.click();
+  await expect(page.getByRole('heading', { name: 'Every Action on your Route is complete' })).toBeVisible();
+});
+
+test('accessibility gate: primary signed-in surfaces have no serious violations', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Load the demonstration scenario' }).click();
+  for (const href of ['/', '/route', '/facts', '/history', '/account']) {
+    await page.goto(href);
+    await expect(page.locator('main')).toBeVisible();
+    await expectNoSeriousAccessibilityViolations(page);
+  }
+});
+
+test('keyboard and reduced-motion gate: fact capture remains operable', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/facts');
+  await page.getByRole('tab', { name: 'Paste a document' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('tab', { name: 'Add manually' })).toBeFocused();
+  await expect(page.getByLabel('What are you adding?')).toBeVisible();
+  expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
 });
 
 test('mobile acceptance: the Focus Action and Reroute remain available at 390px', async ({

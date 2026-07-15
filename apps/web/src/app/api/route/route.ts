@@ -2,10 +2,12 @@ import { FactStatus, GraphVersionError } from '@pathfinder/core';
 import { auth } from '@/auth';
 import { apiError, apiSuccess, correlationId } from '@/lib/api-response';
 import { loadCurrentRoute, loadFactRows } from '@/lib/route-service';
+import { emitOperationalEvent } from '@/lib/telemetry';
 
 /** Returns the current published Route Version. Reads never publish or mutate. */
 export async function GET(request?: Request) {
   const correlation = correlationId(request);
+  const startedAt = performance.now();
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -19,6 +21,15 @@ export async function GET(request?: Request) {
 
     const rows = await loadFactRows(session.user.id);
     const route = await loadCurrentRoute(session.user.id);
+    emitOperationalEvent({
+      correlationId: correlation,
+      service: 'route-engine',
+      operation: 'route_generation',
+      outcome: 'success',
+      durationMs: performance.now() - startedAt,
+      httpStatus: 200,
+      routeStatus: route.status,
+    });
     return apiSuccess(
       {
         route: {
@@ -36,6 +47,14 @@ export async function GET(request?: Request) {
       correlation
     );
   } catch (error) {
+    emitOperationalEvent({
+      correlationId: correlation,
+      service: 'route-engine',
+      operation: 'route_generation',
+      outcome: 'failure',
+      durationMs: performance.now() - startedAt,
+      httpStatus: error instanceof GraphVersionError ? 422 : 500,
+    });
     if (error instanceof GraphVersionError) {
       console.error('Route engine rejected the confirmed Fact set:', error.message);
       return apiError({

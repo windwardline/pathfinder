@@ -133,6 +133,18 @@ The workflow failure is the automation boundary. Notification services such as
 Zapier may subscribe to failed workflow runs, but must not receive Pathfinder
 user data or production credentials.
 
+`apps/web/src/lib/telemetry.ts` emits an enumerated JSON contract for Route
+generation, Fact mutation, Action completion, and magic-link delivery. The
+contract accepts operational categories and timings only; it has no fields for
+user identifiers, email addresses, Fact values, Route content, or documents.
+Inbound correlation headers are accepted only when they are opaque UUIDs.
+
+`.github/workflows/production-alert.yml` converts a failed Production health or
+Recovery drill run into a labeled GitHub issue, updating the existing open
+alert instead of creating notification noise. The issue contains only the
+workflow name, commit, run link, and detection time. Zapier may subscribe to
+the `production-alert` label when an additional delivery channel is useful.
+
 ## Traceability
 
 Supports:

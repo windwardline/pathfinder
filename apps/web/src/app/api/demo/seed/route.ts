@@ -42,7 +42,23 @@ export async function POST(request?: Request) {
     );
   }
 
-  if (!(await checkRateLimit(`demo-seed:${userId}`, 20, 60 * 60_000))) {
+  const [existingFact] = await db
+    .select({ id: factsTable.id })
+    .from(factsTable)
+    .where(eq(factsTable.userId, userId))
+    .limit(1);
+  if (request && existingFact && body.confirmReplaceExisting !== true) {
+    return NextResponse.json(
+      {
+        error:
+          'Loading a demonstration replaces your current Route data. Confirm the replacement to continue.',
+        error_code: 'RESET_CONFIRMATION_REQUIRED',
+      },
+      { status: 409 }
+    );
+  }
+
+  if (!(await checkRateLimit(`demo-seed:${userId}`, 60, 60 * 60_000))) {
     return NextResponse.json(
       { error: 'The demonstration scenario was reset too often. Please wait before trying again.' },
       { status: 429 }
@@ -57,52 +73,153 @@ export async function POST(request?: Request) {
       await tx.delete(factsTable).where(eq(factsTable.userId, userId));
 
       const seededAt = new Date();
-
       const idByRef = new Map<string, string>();
-      for (const action of scenario.actions) {
-        const factId = crypto.randomUUID();
-        idByRef.set(action.ref, factId);
-        const factStatus = action.factStatus ?? 'CONFIRMED';
+      for (const goal of scenario.goals ?? []) idByRef.set(goal.ref, crypto.randomUUID());
+      for (const action of scenario.actions) idByRef.set(action.ref, crypto.randomUUID());
+
+      const resolveRef = (ref: string) => {
+        const id = idByRef.get(ref);
+        if (!id) throw new Error(`Demonstration fixture references unknown item: ${ref}`);
+        return id;
+      };
+      const atOffset = (hours: number) =>
+        new Date(seededAt.getTime() + hours * 60 * 60_000).toISOString();
+      const insertFact = async (
+        factType: 'ACTION' | 'DEPENDENCY' | 'GOAL' | 'REQUIREMENT' | 'OBLIGATION' | 'CONSTRAINT' | 'DEADLINE' | 'BLOCKER',
+        payload: Record<string, unknown>,
+        status: FactStatus = FactStatus.Confirmed,
+        id = crypto.randomUUID()
+      ) => {
         await tx.insert(factsTable).values({
-          id: factId,
+          id,
           userId,
-          factType: 'ACTION',
-          factText: JSON.stringify({
+          factType,
+          factText: JSON.stringify(payload),
+          status,
+          confirmedAt: status === FactStatus.Confirmed ? seededAt : null,
+          confirmedBy: status === FactStatus.Confirmed ? 'seed-demonstration' : null,
+        });
+        await recordProvenance(id, 'seed_demonstration', 100, undefined, tx);
+      };
+
+      for (const goal of scenario.goals ?? []) {
+        await insertFact(
+          'GOAL',
+          {
+            key: 'GOAL',
+            value: { title: goal.title, status: goal.status, priority: goal.priority },
+          },
+          FactStatus.Confirmed,
+          resolveRef(goal.ref)
+        );
+      }
+
+      for (const action of scenario.actions) {
+        const factStatus = action.factStatus ?? 'CONFIRMED';
+        await insertFact(
+          'ACTION',
+          {
             key: 'ACTION',
             value: {
               title: action.title,
               description: action.description,
               status: action.actionStatus,
+              ...(action.goalRef ? { goalId: resolveRef(action.goalRef) } : {}),
               ...(action.routing ? { routing: action.routing } : {}),
             },
             sourceText: action.sourceText,
-          }),
-          status: factStatus,
-          confirmedAt: factStatus === FactStatus.Confirmed ? seededAt : null,
-          confirmedBy: factStatus === FactStatus.Confirmed ? 'seed-demonstration' : null,
-        });
-        await recordProvenance(factId, 'seed_demonstration', 100, undefined, tx);
+          },
+          factStatus as FactStatus,
+          resolveRef(action.ref)
+        );
       }
 
       for (const dependency of scenario.dependencies) {
-        const factId = crypto.randomUUID();
-        await tx.insert(factsTable).values({
-          id: factId,
-          userId,
-          factType: 'DEPENDENCY',
-          factText: JSON.stringify({
+        await insertFact('DEPENDENCY', {
             key: 'DEPENDENCY',
             value: {
-              sourceId: idByRef.get(dependency.prerequisiteRef),
-              targetId: idByRef.get(dependency.dependentRef),
+              sourceId: resolveRef(dependency.prerequisiteRef),
+              targetId: resolveRef(dependency.dependentRef),
               type: 'BLOCKS',
             },
-          }),
-          status: FactStatus.Confirmed,
-          confirmedAt: seededAt,
-          confirmedBy: 'seed-demonstration',
+          });
+      }
+
+      for (const requirement of scenario.requirements ?? []) {
+        await insertFact('REQUIREMENT', {
+          key: 'REQUIREMENT',
+          value: {
+            description: requirement.description,
+            status: requirement.status,
+            hardness: requirement.hardness,
+            targetActionId: resolveRef(requirement.targetRef),
+            ...(requirement.resolutionRef
+              ? { resolutionActionId: resolveRef(requirement.resolutionRef) }
+              : {}),
+          },
         });
-        await recordProvenance(factId, 'seed_demonstration', 100, undefined, tx);
+      }
+
+      for (const constraint of scenario.constraints ?? []) {
+        await insertFact('CONSTRAINT', {
+          key: 'CONSTRAINT',
+          value: {
+            constraintType: constraint.constraintType,
+            description: constraint.description,
+            status: constraint.status,
+            targetActionIds: constraint.targetRefs.map(resolveRef),
+            ...(constraint.resolutionRef
+              ? { resolutionActionId: resolveRef(constraint.resolutionRef) }
+              : {}),
+          },
+        }, constraint.factStatus === 'PROPOSED' ? FactStatus.Proposed : FactStatus.Confirmed);
+      }
+
+      for (const obligation of scenario.obligations ?? []) {
+        await insertFact('OBLIGATION', {
+          key: 'OBLIGATION',
+          value: {
+            title: obligation.title,
+            status: obligation.status,
+            startAt: atOffset(obligation.startsInHours),
+            ...(obligation.durationHours
+              ? { endAt: atOffset(obligation.startsInHours + obligation.durationHours) }
+              : {}),
+            ...(obligation.conflictRefs
+              ? { conflictActionIds: obligation.conflictRefs.map(resolveRef) }
+              : {}),
+            ...(obligation.resolutionRef
+              ? { resolutionActionId: resolveRef(obligation.resolutionRef) }
+              : {}),
+          },
+        }, obligation.factStatus === 'PROPOSED' ? FactStatus.Proposed : FactStatus.Confirmed);
+      }
+
+      for (const deadline of scenario.deadlines ?? []) {
+        await insertFact('DEADLINE', {
+          key: 'DEADLINE',
+          value: {
+            title: deadline.title,
+            dueAt: atOffset(deadline.dueInHours),
+            severity: deadline.severity,
+            targetActionId: resolveRef(deadline.targetRef),
+          },
+        }, deadline.factStatus === 'PROPOSED' ? FactStatus.Proposed : FactStatus.Confirmed);
+      }
+
+      for (const blocker of scenario.blockers ?? []) {
+        await insertFact('BLOCKER', {
+          key: 'BLOCKER',
+          value: {
+            targetActionId: resolveRef(blocker.targetRef),
+            reasonCode: blocker.reasonCode,
+            description: blocker.description,
+            active: blocker.active,
+            ...(blocker.resolutionRef
+              ? { resolutionActionId: resolveRef(blocker.resolutionRef) }
+              : {}),
+          },
+        }, blocker.factStatus === 'PROPOSED' ? FactStatus.Proposed : FactStatus.Confirmed);
       }
 
       const seededFacts = await loadConfirmedFacts(userId, tx);
@@ -122,7 +239,15 @@ export async function POST(request?: Request) {
       success: true,
       scenarioId: scenario.id,
       scenarioTitle: scenario.title,
-      seeded: scenario.actions.length + scenario.dependencies.length,
+      seeded:
+        scenario.actions.length +
+        scenario.dependencies.length +
+        (scenario.goals?.length ?? 0) +
+        (scenario.requirements?.length ?? 0) +
+        (scenario.constraints?.length ?? 0) +
+        (scenario.obligations?.length ?? 0) +
+        (scenario.deadlines?.length ?? 0) +
+        (scenario.blockers?.length ?? 0),
     });
   } catch (error) {
     console.error('POST /api/demo/seed failed:', error);

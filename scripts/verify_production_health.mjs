@@ -45,6 +45,18 @@ try {
         correlation_id: body.correlation_id ?? null,
       });
     } else {
+      const versions = body.versions ?? {};
+      const missingVersions = ['application', 'commit', 'schema', 'engine', 'rule_set']
+        .filter(version => !versions[version]);
+      if (missingVersions.length > 0) {
+        fail('Health endpoint omitted required release identity.', {
+          http_status: response.status,
+          duration_ms: durationMs,
+          missing_versions: missingVersions,
+          correlation_id: body.correlation_id ?? null,
+        });
+        return;
+      }
       console.log(
         JSON.stringify({
           timestamp: new Date().toISOString(),
@@ -55,8 +67,11 @@ try {
           http_status: response.status,
           duration_ms: durationMs,
           correlation_id: body.correlation_id ?? null,
-          engine_version: body.versions?.engine ?? null,
-          rule_set_version: body.versions?.rule_set ?? null,
+          application_version: versions.application,
+          commit_reference: versions.commit,
+          schema_version: versions.schema,
+          engine_version: versions.engine,
+          rule_set_version: versions.rule_set,
         })
       );
     }

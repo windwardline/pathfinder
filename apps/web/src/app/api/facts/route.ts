@@ -23,6 +23,7 @@ import { apiError, apiSuccess, correlationId } from '@/lib/api-response';
 import { recordAuditEvent } from '@/lib/audit';
 import { IdempotencyConflictError, withIdempotency } from '@/lib/idempotency';
 import { provenanceIntegrityHash } from '@/lib/provenance';
+import { emitOperationalEvent } from '@/lib/telemetry';
 
 class FactMutationError extends Error {
   constructor(
@@ -40,6 +41,7 @@ class FactMutationError extends Error {
  */
 export async function POST(request: Request) {
   const id = correlationId(request);
+  const startedAt = performance.now();
   const session = await auth();
   if (!session?.user?.id) {
     return apiError({
@@ -435,6 +437,17 @@ export async function POST(request: Request) {
       )
     );
 
+    emitOperationalEvent({
+      correlationId: id,
+      service: 'facts',
+      operation: 'fact_mutation',
+      outcome: 'success',
+      durationMs: performance.now() - startedAt,
+      httpStatus: 200,
+      mutation: req.action,
+      factType: req.action === 'propose' ? req.payload.key : undefined,
+      rerouteCreated: 'reroute' in result.value && result.value.reroute != null,
+    });
     return apiSuccess(
       { ...result.value, idempotent_replay: result.replayed },
       request,
@@ -442,6 +455,28 @@ export async function POST(request: Request) {
       id
     );
   } catch (error) {
+    emitOperationalEvent({
+      correlationId: id,
+      service: 'facts',
+      operation: 'fact_mutation',
+      outcome:
+        error instanceof FactMutationError ||
+        error instanceof IdempotencyConflictError ||
+        error instanceof GraphVersionError
+          ? 'rejected'
+          : 'failure',
+      durationMs: performance.now() - startedAt,
+      httpStatus:
+        error instanceof FactMutationError
+          ? error.status
+          : error instanceof IdempotencyConflictError
+            ? 409
+            : error instanceof GraphVersionError
+              ? 422
+              : 500,
+      mutation: parsed.data.action,
+      factType: parsed.data.action === 'propose' ? parsed.data.payload.key : undefined,
+    });
     if (error instanceof FactMutationError) {
       return apiError({
         status: error.status,
