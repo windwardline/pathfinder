@@ -22,8 +22,18 @@ export default defineConfig({
       grepInvert: /mobile acceptance/,
     },
     {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+      grepInvert: /mobile acceptance/,
+    },
+    {
       name: 'mobile-chromium',
       use: { ...devices['Pixel 5'], viewport: { width: 390, height: 844 } },
+      grep: /mobile acceptance/,
+    },
+    {
+      name: 'mobile-webkit',
+      use: { ...devices['iPhone 13'], viewport: { width: 390, height: 844 } },
       grep: /mobile acceptance/,
     },
   ],

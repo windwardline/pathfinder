@@ -66,14 +66,28 @@ export interface RerouteRecord {
 }
 
 export interface FactPayload {
-  key: 'ACTION' | 'DEPENDENCY';
+  key: 'ACTION' | 'DEPENDENCY' | 'GOAL' | 'REQUIREMENT' | 'OBLIGATION' | 'CONSTRAINT' | 'DEADLINE' | 'BLOCKER';
   value: {
     title?: string;
     description?: string;
-    status?: 'OPEN' | 'COMPLETED';
+    status?: string;
+    priority?: number;
+    goalId?: string;
     sourceId?: string;
     targetId?: string;
     type?: string;
+    targetActionId?: string;
+    targetActionIds?: string[];
+    resolutionActionId?: string;
+    constraintType?: string;
+    hardness?: string;
+    dueAt?: string;
+    severity?: string;
+    startAt?: string;
+    endAt?: string;
+    conflictActionIds?: string[];
+    reasonCode?: string;
+    active?: boolean;
   };
   sourceText?: string;
 }
@@ -142,6 +156,16 @@ export const api = {
         idempotencyKey: crypto.randomUUID(),
       }),
     }),
+  proposeFact: (payload: FactPayload) =>
+    request<{ fact: FactRecord }>('/api/facts', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'propose',
+        payload,
+        provenance: { source: 'user_input' },
+        idempotencyKey: crypto.randomUUID(),
+      }),
+    }),
   confirmFact: (factId: string) =>
     request<{ fact: FactRecord; reroute: RerouteRecord | null }>('/api/facts', {
       method: 'POST',
@@ -167,10 +191,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ actionId, idempotencyKey: crypto.randomUUID() }),
     }),
-  seedDemo: (scenarioId = 'SD-001') =>
+  seedDemo: (scenarioId = 'SD-001', confirmReplaceExisting = false) =>
     request<{ scenarioId: string; scenarioTitle: string; seeded: number }>('/api/demo/seed', {
       method: 'POST',
-      body: JSON.stringify({ scenarioId }),
+      body: JSON.stringify({ scenarioId, confirmReplaceExisting }),
     }),
   supersedeFact: (
     factId: string,

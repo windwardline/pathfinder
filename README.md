@@ -6,8 +6,14 @@ Pathfinder builds and continuously updates a user's Reentry Route. It shows what
 
 - Product baseline: Version 2 Design Freeze
 - Implementation scope: Release 1
-- Current phase: Release 1 production candidate
+- Current phase: Release 1.2 production release
+- Live product: [pathfinder.windwardline.com](https://pathfinder.windwardline.com)
 - Canonical source: Markdown documentation in [`docs/`](docs/)
+
+[![CI](https://github.com/windwardline/pathfinder/actions/workflows/ci.yml/badge.svg)](https://github.com/windwardline/pathfinder/actions/workflows/ci.yml)
+[![Security analysis](https://github.com/windwardline/pathfinder/actions/workflows/security.yml/badge.svg)](https://github.com/windwardline/pathfinder/actions/workflows/security.yml)
+[![Documentation validation](https://github.com/windwardline/pathfinder/actions/workflows/documentation.yml/badge.svg)](https://github.com/windwardline/pathfinder/actions/workflows/documentation.yml)
+[![Production health](https://github.com/windwardline/pathfinder/actions/workflows/production-health.yml/badge.svg)](https://github.com/windwardline/pathfinder/actions/workflows/production-health.yml)
 
 Instructor publications are derived artifacts. They do not supersede the canonical Markdown corpus.
 
@@ -50,7 +56,7 @@ Read these documents before implementation:
 pnpm install
 pnpm dev        # starts apps/web on http://localhost:3000
 pnpm typecheck  # tsc --noEmit across packages
-pnpm test       # deterministic Route Engine fixtures (packages/core)
+pnpm test       # unit, adversarial, integration, and performance suites
 pnpm lint
 pnpm build
 ```

@@ -67,6 +67,10 @@ export function EmptyState({
               <p className="mt-2 text-xs leading-relaxed text-ink-faint">
                 {DEMONSTRATION_SCENARIO_CATALOG.find(scenario => scenario.id === scenarioId)?.objective}
               </p>
+              <p className="mt-2 rounded-lg bg-raised px-3 py-2 text-xs leading-relaxed text-ink-soft">
+                <span className="font-medium text-ink">Next:</span>{' '}
+                {DEMONSTRATION_SCENARIO_CATALOG.find(scenario => scenario.id === scenarioId)?.nextStep}
+              </p>
             </div>
             <div className="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <a

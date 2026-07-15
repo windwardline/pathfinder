@@ -62,6 +62,10 @@ function jsonRequest(url: string, body: unknown) {
   });
 }
 
+function seedRequest(scenarioId: (typeof DEMONSTRATION_SCENARIO_IDS)[number]) {
+  return jsonRequest('/api/demo/seed', { scenarioId, confirmReplaceExisting: true });
+}
+
 integration('API lifecycle and history integration', () => {
   beforeAll(async () => {
     await db.delete(auditEvents);
@@ -192,16 +196,75 @@ integration('API lifecycle and history integration', () => {
   it('selects every canonical seeded demonstration scenario by ID', async () => {
     for (const scenarioId of DEMONSTRATION_SCENARIO_IDS) {
       const response = await seedDemo(
-        jsonRequest('/api/demo/seed', { scenarioId })
+        seedRequest(scenarioId)
       );
       expect(response.status).toBe(200);
       expect((await response.json()).scenarioId).toBe(scenarioId);
     }
   });
 
+  it('seeds canonical domain Facts and the expected Focus Action for every demonstration', async () => {
+    const expectations = [
+      ['SD-001', 'Obtain a state identification card', [], null],
+      ['SD-002', 'Complete employment onboarding at Harbor Light Logistics', [], null],
+      ['SD-003', 'Call your supervision officer', ['CONSTRAINT'], 'Restore transportation access'],
+      ['SD-004', 'Complete the housing application', ['BLOCKER'], 'Request a housing denial review'],
+      ['SD-005', 'Complete an optional worksheet', ['OBLIGATION'], 'Resolve the work schedule conflict'],
+      ['SD-006', 'Attend orientation', ['DEADLINE'], 'Submit time-sensitive paperwork'],
+      ['SD-007', 'Obtain a state identification card', [], null],
+      ['SD-008', 'Obtain a state identification card', [], null],
+      ['SD-009', 'Obtain a state identification card', [], null],
+      ['SD-010', null, ['GOAL'], null],
+    ] as const;
+
+    for (const [scenarioId, expectedFocusTitle, expectedDomainTypes, expectedConfirmedFocus] of expectations) {
+      const response = await seedDemo(seedRequest(scenarioId));
+      expect(response.status).toBe(200);
+
+      const routeBody = await (await getRoute()).json();
+      const focus = routeBody.route.steps.find(
+        (step: { actionId: string }) => step.actionId === routeBody.route.focusActionId
+      );
+      expect(focus?.title ?? null).toBe(expectedFocusTitle);
+
+      const storedFacts = await db.select().from(facts).where(eq(facts.userId, USER_ID));
+      for (const expectedType of expectedDomainTypes) {
+        expect(storedFacts.some(fact => fact.factType === expectedType)).toBe(true);
+      }
+
+      if (expectedConfirmedFocus) {
+        const proposedDomainFact = storedFacts.find(
+          fact => expectedDomainTypes.some(type => type === fact.factType) && fact.status === 'PROPOSED'
+        );
+        expect(proposedDomainFact).toBeDefined();
+        const confirmation = await mutateFact(
+          jsonRequest('/api/facts', {
+            action: 'confirm',
+            factId: proposedDomainFact!.id,
+            confirmationMethod: 'USER_REVIEW',
+            idempotencyKey: `confirm-${scenarioId}`,
+          })
+        );
+        expect(confirmation.status).toBe(200);
+        expect((await confirmation.json()).reroute).not.toBeNull();
+        const confirmedRoute = await (await getRoute()).json();
+        const confirmedFocus = confirmedRoute.route.steps.find(
+          (step: { actionId: string }) => step.actionId === confirmedRoute.route.focusActionId
+        );
+        expect(confirmedFocus.title).toBe(expectedConfirmedFocus);
+      }
+
+      if (scenarioId === 'SD-006') {
+        const deadline = storedFacts.find(fact => fact.factType === 'DEADLINE');
+        const dueAt = deadline ? JSON.parse(deadline.factText).value.dueAt : null;
+        expect(new Date(dueAt).getTime()).toBeGreaterThan(Date.now() + 23 * 60 * 60_000);
+      }
+    }
+  });
+
   it('keeps the SD-008 Proposed Fact outside the Route and completes SD-010', async () => {
     const proposedResponse = await seedDemo(
-      jsonRequest('/api/demo/seed', { scenarioId: 'SD-008' })
+      seedRequest('SD-008')
     );
     expect(proposedResponse.status).toBe(200);
     const proposedRoute = await (await getRoute()).json();
@@ -213,7 +276,7 @@ integration('API lifecycle and history integration', () => {
     ).toBe(false);
 
     const completedResponse = await seedDemo(
-      jsonRequest('/api/demo/seed', { scenarioId: 'SD-010' })
+      seedRequest('SD-010')
     );
     expect(completedResponse.status).toBe(200);
     const completedRoute = await (await getRoute()).json();
@@ -224,18 +287,33 @@ integration('API lifecycle and history integration', () => {
   it('rejects an unknown demonstration scenario without replacing the current Route', async () => {
     const before = await (await getRoute()).json();
     const response = await seedDemo(
-      jsonRequest('/api/demo/seed', { scenarioId: 'SD-999' })
+      jsonRequest('/api/demo/seed', { scenarioId: 'SD-999', confirmReplaceExisting: true })
     );
     expect(response.status).toBe(400);
     const after = await (await getRoute()).json();
     expect(after.route.id).toBe(before.route.id);
   });
 
+  it('requires explicit confirmation before replacing existing Route data', async () => {
+    expect((await seedDemo(seedRequest('SD-001'))).status).toBe(200);
+    const before = await (await getRoute()).json();
+
+    const rejected = await seedDemo(
+      jsonRequest('/api/demo/seed', { scenarioId: 'SD-010' })
+    );
+    expect(rejected.status).toBe(409);
+    expect((await rejected.json()).error_code).toBe('RESET_CONFIRMATION_REQUIRED');
+    expect((await (await getRoute()).json()).route.id).toBe(before.route.id);
+
+    expect((await seedDemo(seedRequest('SD-010'))).status).toBe(200);
+    expect((await (await getRoute()).json()).route.status).toBe('COMPLETED');
+  });
+
   it('returns a stable current Route Version and rejects stale Reroute requests', async () => {
     expect(
       (
         await seedDemo(
-          jsonRequest('/api/demo/seed', { scenarioId: 'SD-001' })
+          seedRequest('SD-001')
         )
       ).status
     ).toBe(200);

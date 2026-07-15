@@ -12,7 +12,11 @@ export interface ApiErrorOptions {
 
 export function correlationId(request?: Request): string {
   const provided = request?.headers.get('x-correlation-id');
-  return provided && provided.length <= 128 ? provided : crypto.randomUUID();
+  // Only accept opaque UUIDs. Request headers are attacker-controlled; logging
+  // arbitrary text here would create a log-injection and privacy boundary gap.
+  return provided && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(provided)
+    ? provided
+    : crypto.randomUUID();
 }
 
 export function apiError(options: ApiErrorOptions) {

@@ -55,8 +55,7 @@ function RouteStepItem({ step }: { step: RouteStep }) {
       <div
         className={cn(
           'rounded-xl border bg-surface transition-colors',
-          isFocus ? 'border-spruce/25' : 'border-hairline',
-          isBlocked && 'opacity-80'
+          isFocus ? 'border-spruce/25' : 'border-hairline'
         )}
       >
         <button
