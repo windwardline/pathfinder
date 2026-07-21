@@ -1,6 +1,6 @@
 # Demo Day Runbook
 
-**Version:** 1.2  
+**Version:** 1.7  
 **Status:** Active Demo Day Procedure  
 **Owner:** Product & Engineering
 
@@ -61,19 +61,19 @@ therefore remains deferred with no recorded participant outcomes.
 
 ## Final Voiceover
 
-The following 185-word script is synchronized to the five storyboard panels.
+The following 186-word script is synchronized to the five storyboard panels.
 The validation script fails if this block drifts from the manifest.
 
 <!-- demo-video-narration:start -->
-Reentry is not one checklist. Identification, employment, housing, and transportation can depend on one another. Pathfinder turns Confirmed Facts into a Route. Here, the Focus Action is to obtain a state identification card because it is a hard prerequisite that unlocks three next steps.
+Coming home, one missing state ID can stall a job, banking, and housing at the same time. Each task is manageable. The order can derail everything. Pathfinder turns Confirmed Facts into one explainable Route, starting with the Action unlocking the rest.
 
-When I mark it complete, the deterministic Route Engine recalculates. This Reroute shows a new focus, all three Actions that became available, and the work that moved, so the participant can see exactly why the Route changed.
+When I mark it complete, the deterministic Route Engine recalculates. A new Focus Action appears with three Actions and moved work. The participant sees what changed and why, without yielding control to an opaque recommendation.
 
-AI can propose information, but it cannot make a Fact true or sequence the Route. This transit-pass item is still Proposed, and the Focus Action stays unchanged until I review it.
+AI can propose information, but it cannot make a Fact true or sequence the Route. This transit-pass item is still Proposed, so the Focus Action stays unchanged until the participant reviews it.
 
-After I confirm it, the engine recomputes from Confirmed Facts and records another structured Reroute. That separation is deliberate: the participant controls the Facts; the Route Engine controls sequencing.
+After I confirm it, the engine recomputes only from Confirmed Facts and records a structured Reroute. That boundary is deliberate: the participant controls the Facts; the Route Engine controls sequencing consistently and visibly.
 
-Pathfinder preserves every change in Route History, works on mobile, and is production deployed with automated tests across the engine, APIs, security boundaries, and user journey. I built it as a forward-deployed response to a reentry bottleneck, and I am seeking mission-aligned pilot partners.
+I built Pathfinder end to end: deterministic engine, API endpoints, security boundaries, responsive experience, and deployment. Route History preserves every change. This is how I work: close to the problem, accountable to the people using it, and ready to turn Pathfinder into a mission-aligned pilot.
 <!-- demo-video-narration:end -->
 
 The first-person click language is intentional but restrained. It tells the
@@ -112,10 +112,13 @@ stage.
 
 ## Recommended Video Production Workflow
 
-Use the locked production stack: ElevenLabs Starter for the presenter's voice
-clone, OBS Studio for real application capture, DaVinci Resolve Free for the
-final edit, Mixkit for watermark-free licensed assets, FFmpeg for technical
-verification, and the Figma board plus manifest for editorial control. DaVinci
+Use the locked production stack: the ElevenLabs Voice Library voice
+`Michael C. Vincent - Confident, Expressive` with Eleven v3 and Natural
+stability for narration; OBS Studio for real application capture; DaVinci
+Resolve Free for final conformance; Playwright for reproducible captures of the
+real SD-008 application state; Pillow and FFmpeg for deterministic picture,
+caption, and audio assembly; and the Figma board plus manifest for editorial
+control. DaVinci
 is preferred over CapCut because its free desktop edition provides precise
 keyframes, professional titles and transitions, Fusion motion graphics,
 subtitles, color, and Fairlight audio without making cloud processing part of
@@ -130,41 +133,39 @@ the workflow. CapCut remains outside the governed final-video path.
 3. In DaVinci Resolve, add a 58-pixel Pathfinder-spruce ring at 45% opacity for
    300 milliseconds on each semantic click. Do not pulse continuously. Use
    105-115% punch-ins only on the Focus Action, Unlocks, and Reroute details.
-4. Record a clean 60-90 second voice sample and the final narration in a quiet,
-   soft room, six to eight inches from the microphone. Authentic recorded voice
-   remains the fallback and must be kept even when the clone is used.
-5. Use ElevenLabs Starter and Instant Voice Cloning for the approved narration.
-   Obtain action-time approval immediately before uploading the identified
-   source recording. Export audio only; do not use ElevenLabs video or dubbing
-   export. Generate paragraph-sized segments so a timing or pronunciation fix
-   does not require regenerating the entire script. Compare the clone against
-   the authentic recording and use the real take if the clone sounds less
-   credible.
-6. Assemble footage and narration in DaVinci Resolve. Create captions from the
-   approved transcript or import an SRT, then manually correct every protected
+4. Use the ElevenLabs Creator plan and the Voice Library voice
+   `Michael C. Vincent - Confident, Expressive`. Do not record, upload, or
+   clone the presenter's voice. Before final generation, verify the voice's
+   library record and applicable license, then save the source URL, access date,
+   voice name, and license evidence with the project.
+5. Render the approved narration with Eleven v3 and Natural stability. Export
+   audio only; do not use ElevenLabs video or dubbing export. Generate the five
+   paragraph-sized segments separately, review at least two performance takes
+   per segment, and select delivery through take choice and pause edits in
+   DaVinci; Eleven v3 does not expose the speed control used by earlier models.
+   Prefer 48 kHz PCM/WAV output when the interface makes it available; otherwise
+   use the highest available MP3 quality and conform to 48 kHz in DaVinci.
+6. Assemble the real footage, authentic application captures, narration,
+   original tonal underscore, click cues, and governed SRT with
+   `scripts/render_demo_video.py`. The renderer preserves every protected
    term: Fact, Confirmed Fact, Proposed Fact, Route, Focus Action, and Reroute.
-7. Build the 0-3 second intro and 86-90 second close in DaVinci from the
-   Pathfinder wordmark, spruce accent, and production domain. Use DaVinci's
-   native Fusion titles and transitions first. A Mixkit DaVinci template may be
-   used only after removing generic decoration and matching the Pathfinder type,
-   color, spacing, and motion language.
-8. Select one Mixkit music track and no more than two restrained Mixkit sound
-   effects. Confirm that every selected item carries the applicable Mixkit Free
-   License, then save its source URL, download date, and a copy or screenshot of
-   the license with the video project. Do not use stock footage of participants
-   or generated Pathfinder UI; real product footage remains the proof.
+7. Build the opener and close from real Pathfinder imagery, the Pathfinder
+   wordmark, spruce accent, and production domain. Use native typography,
+   restrained fades, and slow push-ins. Do not generate or reconstruct product
+   UI.
+8. Use the original in-project tonal underscore and two restrained click cues.
+   No stock footage, stock music, generated imagery, or third-party template is
+   used in the final cut.
 9. Keep narration near -14 LUFS integrated with peaks below -1 dB. Keep music
    near -30 dB under narration, raise it only for the short intro and close, and
    duck it under every important line. Use a subtle click sound only when it
    reinforces one of the four semantic clicks.
-10. If Mixkit cannot supply one excellent score or restrained motion element,
-    pause for approval before buying one month of Uppbeat Creator. It is the
-    only governed paid fallback; do not subscribe to Artlist Max for this video.
-    Save the asset and license record while the subscription is active. Confirm
-    the checkout price and terms immediately before purchase.
-11. Export an H.264 MP4 at 1920 by 1080, 30 frames per second, 16-20 Mbps video,
-   and AAC audio at 48 kHz. Verify duration, codec, resolution, frame rate, and
-   audio streams with `ffprobe`, then watch the export from beginning to end.
+10. Import the rendered master into the dedicated DaVinci Resolve timeline
+    `Pathfinder Demo Day 90s Final`, verify video and stereo audio, and save the
+    project.
+11. Export an H.264 MP4 at 1920 by 1080 and 30 frames per second with AAC audio
+    at 48 kHz. Verify duration, codec, resolution, frame rate, audio streams,
+    loudness, true peak, and complete decode with FFmpeg and `ffprobe`.
 
 The full tool and security analysis is recorded in
 [Demo Video Production Audit](demo-video-production-audit.md).
