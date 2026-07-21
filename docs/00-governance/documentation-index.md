@@ -134,6 +134,7 @@ When documents conflict, the higher-authority source governs.
 | incident-response.md | Defines production incident handling | Engineering |
 | backup-recovery.md | Defines recovery and continuity | Engineering |
 | operational-runbook.md | Defines routine operating procedures | Engineering |
+| demo-day-runbook.md | Defines the governed live-demo and 90-second video procedure | Product & Engineering |
 | release-1-2-record.md | Records the traceable Release 1.2 candidate and gates | Product & Engineering |
 
 ## 11 — Implementation
