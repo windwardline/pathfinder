@@ -67,6 +67,60 @@ function validate(manifest) {
     errors.push('storyboardUrl must point to the governed Figma storyboard');
   }
 
+  const productionStack = manifest.productionStack ?? {};
+  const voiceClone = productionStack.voiceClone ?? {};
+  if (voiceClone.provider !== 'ElevenLabs' ||
+      voiceClone.plan !== 'Starter' ||
+      voiceClone.method !== 'Instant Voice Cloning') {
+    errors.push('productionStack.voiceClone must use ElevenLabs Starter with Instant Voice Cloning');
+  }
+  if (voiceClone.exportMode !== 'audio-only') {
+    errors.push('ElevenLabs output must be audio-only so editing and export remain governed in DaVinci Resolve');
+  }
+  if (voiceClone.sourceConsentRequired !== true) {
+    errors.push('ElevenLabs voice-clone source upload must require presenter consent');
+  }
+
+  const screenCapture = productionStack.screenCapture ?? {};
+  if (screenCapture.application !== 'OBS Studio' ||
+      screenCapture.source !== 'real Pathfinder application footage') {
+    errors.push('productionStack.screenCapture must use OBS Studio with real Pathfinder application footage');
+  }
+
+  const finalEdit = productionStack.finalEdit ?? {};
+  if (finalEdit.application !== 'DaVinci Resolve' || finalEdit.edition !== 'Free') {
+    errors.push('productionStack.finalEdit must use the free edition of DaVinci Resolve');
+  }
+
+  const assetLayer = productionStack.assetLayer ?? {};
+  if (assetLayer.primaryProvider !== 'Mixkit' || assetLayer.cost !== 'free') {
+    errors.push('productionStack.assetLayer must use free Mixkit assets as its primary source');
+  }
+  if (assetLayer.watermarkFree !== true) {
+    errors.push('productionStack.assetLayer must remain watermark-free');
+  }
+  if (assetLayer.attributionRequired !== false) {
+    errors.push('productionStack.assetLayer must not depend on attribution for publication');
+  }
+  const assetUses = Array.isArray(assetLayer.uses) ? assetLayer.uses : [];
+  for (const requiredUse of ['music', 'sound effects', 'DaVinci Resolve templates']) {
+    if (!assetUses.includes(requiredUse)) {
+      errors.push(`productionStack.assetLayer is missing required use: ${requiredUse}`);
+    }
+  }
+  if (assetLayer.fallbackProvider !== 'Uppbeat Creator' ||
+      assetLayer.fallbackRequiresApproval !== true) {
+    errors.push('the paid asset fallback must be approval-gated Uppbeat Creator');
+  }
+  const excludedFromFinalVideo = Array.isArray(productionStack.excludedFromFinalVideo)
+    ? productionStack.excludedFromFinalVideo
+    : [];
+  for (const excluded of ['Artlist Max', 'MiniMax Speech', 'generated Pathfinder UI']) {
+    if (!excludedFromFinalVideo.includes(excluded)) {
+      errors.push(`productionStack.excludedFromFinalVideo must include ${excluded}`);
+    }
+  }
+
   const capture = manifest.capture ?? {};
   if (capture.source !== 'real Pathfinder application footage') {
     errors.push('capture.source must require real Pathfinder application footage');
@@ -205,6 +259,7 @@ try {
     console.log('- runbook narration matches the manifest');
     console.log('- exact product copy and the Confirmed-Fact trust boundary are present');
     console.log('- cursor cues satisfy the visibility contract');
+    console.log('- production stack is locked and watermark-free');
   }
 } catch (error) {
   console.error(`Demo video manifest could not be read: ${error.message}`);

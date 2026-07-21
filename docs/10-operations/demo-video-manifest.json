@@ -4,6 +4,43 @@
   "durationSeconds": 90,
   "scenarioId": "SD-008",
   "storyboardUrl": "https://www.figma.com/board/hlrY9M2zrlWVgA9NFAT4GA",
+  "productionStack": {
+    "voiceClone": {
+      "provider": "ElevenLabs",
+      "plan": "Starter",
+      "method": "Instant Voice Cloning",
+      "exportMode": "audio-only",
+      "sourceConsentRequired": true
+    },
+    "screenCapture": {
+      "application": "OBS Studio",
+      "source": "real Pathfinder application footage"
+    },
+    "finalEdit": {
+      "application": "DaVinci Resolve",
+      "edition": "Free"
+    },
+    "assetLayer": {
+      "primaryProvider": "Mixkit",
+      "cost": "free",
+      "watermarkFree": true,
+      "attributionRequired": false,
+      "uses": [
+        "music",
+        "sound effects",
+        "DaVinci Resolve templates"
+      ],
+      "fallbackProvider": "Uppbeat Creator",
+      "fallbackRequiresApproval": true
+    },
+    "excludedFromFinalVideo": [
+      "Artlist Max",
+      "MiniMax Speech",
+      "MiniMax Hailuo",
+      "MiniMax Music",
+      "generated Pathfinder UI"
+    ]
+  },
   "capture": {
     "source": "real Pathfinder application footage",
     "resolution": "1920x1080",
