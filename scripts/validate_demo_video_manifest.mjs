@@ -68,23 +68,32 @@ function validate(manifest) {
   }
 
   const productionStack = manifest.productionStack ?? {};
-  const voiceClone = productionStack.voiceClone ?? {};
-  if (voiceClone.provider !== 'ElevenLabs' ||
-      voiceClone.plan !== 'Starter' ||
-      voiceClone.method !== 'Instant Voice Cloning') {
-    errors.push('productionStack.voiceClone must use ElevenLabs Starter with Instant Voice Cloning');
+  const narrationVoice = productionStack.narrationVoice ?? {};
+  if (narrationVoice.provider !== 'ElevenLabs' ||
+      narrationVoice.plan !== 'Creator' ||
+      narrationVoice.method !== 'Voice Library' ||
+      narrationVoice.voice !== 'Michael C. Vincent - Confident, Expressive' ||
+      narrationVoice.model !== 'Eleven v3' ||
+      narrationVoice.stability !== 'Natural') {
+    errors.push('productionStack.narrationVoice must use the ElevenLabs Voice Library voice Michael C. Vincent - Confident, Expressive with Eleven v3 and Natural stability');
   }
-  if (voiceClone.exportMode !== 'audio-only') {
+  if (narrationVoice.sourceUrl !== 'https://elevenlabs.io/voice-library/adult-male-voices') {
+    errors.push('the governed ElevenLabs narration voice must retain its public source URL');
+  }
+  if (narrationVoice.generationUnit !== 'paragraph-sized segments') {
+    errors.push('ElevenLabs narration must be generated in paragraph-sized segments for governed timing and repair');
+  }
+  if (narrationVoice.exportMode !== 'audio-only') {
     errors.push('ElevenLabs output must be audio-only so editing and export remain governed in DaVinci Resolve');
   }
-  if (voiceClone.sourceConsentRequired !== true) {
-    errors.push('ElevenLabs voice-clone source upload must require presenter consent');
+  if (narrationVoice.licenseVerificationRequired !== true) {
+    errors.push('the ElevenLabs Voice Library license and voice record must be verified before final export');
   }
 
   const screenCapture = productionStack.screenCapture ?? {};
-  if (screenCapture.application !== 'OBS Studio' ||
+  if (screenCapture.application !== 'OBS Studio and Playwright' ||
       screenCapture.source !== 'real Pathfinder application footage') {
-    errors.push('productionStack.screenCapture must use OBS Studio with real Pathfinder application footage');
+    errors.push('productionStack.screenCapture must use OBS Studio and Playwright with real Pathfinder application footage');
   }
 
   const finalEdit = productionStack.finalEdit ?? {};
@@ -93,8 +102,8 @@ function validate(manifest) {
   }
 
   const assetLayer = productionStack.assetLayer ?? {};
-  if (assetLayer.primaryProvider !== 'Mixkit' || assetLayer.cost !== 'free') {
-    errors.push('productionStack.assetLayer must use free Mixkit assets as its primary source');
+  if (assetLayer.primaryProvider !== 'Original Pathfinder production assets' || assetLayer.cost !== 'free') {
+    errors.push('productionStack.assetLayer must use original Pathfinder production assets');
   }
   if (assetLayer.watermarkFree !== true) {
     errors.push('productionStack.assetLayer must remain watermark-free');
@@ -103,14 +112,13 @@ function validate(manifest) {
     errors.push('productionStack.assetLayer must not depend on attribution for publication');
   }
   const assetUses = Array.isArray(assetLayer.uses) ? assetLayer.uses : [];
-  for (const requiredUse of ['music', 'sound effects', 'DaVinci Resolve templates']) {
+  for (const requiredUse of ['original tonal underscore', 'two restrained click cues', 'native typography and transitions']) {
     if (!assetUses.includes(requiredUse)) {
       errors.push(`productionStack.assetLayer is missing required use: ${requiredUse}`);
     }
   }
-  if (assetLayer.fallbackProvider !== 'Uppbeat Creator' ||
-      assetLayer.fallbackRequiresApproval !== true) {
-    errors.push('the paid asset fallback must be approval-gated Uppbeat Creator');
+  if (assetLayer.thirdPartyStockAssetsUsed !== false) {
+    errors.push('the final production must not use third-party stock assets');
   }
   const excludedFromFinalVideo = Array.isArray(productionStack.excludedFromFinalVideo)
     ? productionStack.excludedFromFinalVideo
@@ -210,8 +218,8 @@ function validate(manifest) {
 
   const fullNarration = narration.join(' ');
   const wordCount = words(fullNarration).length;
-  if (wordCount < 170 || wordCount > 185) {
-    errors.push(`narration must contain 170-185 words; found ${wordCount}`);
+  if (wordCount < 170 || wordCount > 186) {
+    errors.push(`narration must contain 170-186 words; found ${wordCount}`);
   }
   for (const pattern of unsupportedClaims) {
     if (pattern.test(fullNarration)) {

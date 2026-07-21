@@ -41,14 +41,34 @@ test('the canonical 90-second manifest is screen, narration, and cursor aligned'
   assert.match(result.stdout, /production stack is locked and watermark-free/);
 });
 
-test('a different voice-clone provider fails the locked production stack', async () => {
+test('a different narration provider fails the locked production stack', async () => {
   const candidate = await mutateManifest(manifest => {
-    manifest.productionStack.voiceClone.provider = 'MiniMax';
+    manifest.productionStack.narrationVoice.provider = 'MiniMax';
   });
   const result = validate(candidate);
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /ElevenLabs/);
+});
+
+test('a non-v3 narration model fails the locked production stack', async () => {
+  const candidate = await mutateManifest(manifest => {
+    manifest.productionStack.narrationVoice.model = 'Eleven Multilingual v2';
+  });
+  const result = validate(candidate);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Eleven v3/);
+});
+
+test('a cloned narration voice fails the no-recording production path', async () => {
+  const candidate = await mutateManifest(manifest => {
+    manifest.productionStack.narrationVoice.method = 'Instant Voice Cloning';
+  });
+  const result = validate(candidate);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Voice Library/);
 });
 
 test('a watermarked asset source fails the locked production stack', async () => {
@@ -59,6 +79,16 @@ test('a watermarked asset source fails the locked production stack', async () =>
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /watermark-free/);
+});
+
+test('a third-party stock asset fails the locked production stack', async () => {
+  const candidate = await mutateManifest(manifest => {
+    manifest.productionStack.assetLayer.thirdPartyStockAssetsUsed = true;
+  });
+  const result = validate(candidate);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /third-party stock assets/);
 });
 
 test('a timeline gap fails validation', async () => {
