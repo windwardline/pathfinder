@@ -24,11 +24,10 @@ does not by itself prove semantic implementation conformance.
 | Security and abuse resistance | Implemented for Release 1 | IDOR, lifecycle, injection, rate-limit, secret and dependency scans | External penetration testing is not claimed |
 | Deployment and monitoring | Implemented for pilot | Vercel, production health, alerts, release identity | Vercel rebuilds rather than promotes one immutable artifact |
 | Backup, restore, deletion propagation | Implemented and rehearsed synthetically | Weekly recovery drill and pseudonymous deletion reapplication | Provider-level restore exercise requires Neon control-plane execution |
-| Human product validation | In progress | Release 1 Validation Study | Real participant sessions are required |
+| Human product validation | Deferred | Release 1 Validation Study records no participant outcomes | Real participant sessions are required before making human-validation claims |
 
 ## Release Truth Rule
 
 Marketing, demonstrations, and repository documentation may describe an item as
 validated only when its evidence row is complete. Technical verification and
 human product validation are reported separately.
-
