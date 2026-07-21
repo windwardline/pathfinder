@@ -1,6 +1,6 @@
 # Demo Day Runbook
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Status:** Active Demo Day Procedure  
 **Owner:** Product & Engineering
 
@@ -15,6 +15,13 @@ The demonstration must make one distinction memorable:
 
 > AI may propose information. The participant controls which Facts become
 > Confirmed Facts. The deterministic Route Engine controls sequencing.
+
+The [Figma storyboard](https://www.figma.com/board/hlrY9M2zrlWVgA9NFAT4GA)
+defines the five visual panels. The machine-readable
+[Demo Video Manifest](demo-video-manifest.json) is the canonical source for
+their timing, exact screen copy, narration, and cursor choreography. Run
+`node scripts/validate_demo_video_manifest.mjs` whenever either artifact
+changes.
 
 ## Evidence Boundary
 
@@ -46,38 +53,32 @@ therefore remains deferred with no recorded participant outcomes.
 
 | Time | Product beat | Presenter action | Point to land |
 |---|---|---|---|
-| 00-16 seconds | Focus Action | Show SD-001 already loaded and point to `Obtain a state identification card` and its three Unlocks. | Reentry is a sequencing problem, not one checklist. |
+| 00-16 seconds | Focus Action | Show SD-008 already loaded and point to `Obtain a state identification card` and its three Unlocks. | Reentry is a sequencing problem, not one checklist. |
 | 16-34 seconds | First Reroute | Complete the Focus Action and pause on the structured Reroute. | Pathfinder recalculates and explains what changed. |
 | 34-50 seconds | Proposed Fact | Show the Proposed Fact banner and unchanged Focus Action. | AI cannot make a Fact true or change the Route. |
 | 50-68 seconds | Confirmation Reroute | Confirm the Fact and pause on the second Reroute. | Participant confirmation triggers deterministic recomputation. |
-| 68-90 seconds | Production close | Show the responsive mobile view or return to Today. | The product is deployed, explainable, and ready for a mission-aligned pilot partner. |
+| 68-90 seconds | Production close | Show Route History, cut to the responsive mobile Today view, and finish on the production domain. | The product is deployed, explainable, and ready for a mission-aligned pilot partner. |
 
 ## Final Voiceover
 
-Reentry is not one checklist. A housing step can depend on identification;
-employment can depend on transportation; every change can reorder what matters
-next.
+The following 185-word script is synchronized to the five storyboard panels.
+The validation script fails if this block drifts from the manifest.
 
-Pathfinder turns Confirmed Facts into a clear Route. Here, the Focus Action is
-to obtain a state identification card. It comes first because it is a hard
-prerequisite and unlocks three downstream Actions. When I complete it,
-Pathfinder recalculates the Route and shows exactly what changed: a new focus,
-three newly available Actions, and the work that moved.
+<!-- demo-video-narration:start -->
+Reentry is not one checklist. Identification, employment, housing, and transportation can depend on one another. Pathfinder turns Confirmed Facts into a Route. Here, the Focus Action is to obtain a state identification card because it is a hard prerequisite that unlocks three next steps.
 
-AI can help extract candidate information, but it never decides the Route and
-it never makes Facts true. This transit-pass item is only Proposed, so the Route
-stays unchanged. After I confirm it, a deterministic Route Engine recalculates
-and produces another structured Reroute.
+When I mark it complete, the deterministic Route Engine recalculates. This Reroute shows a new focus, all three Actions that became available, and the work that moved, so the participant can see exactly why the Route changed.
 
-That separation is deliberate: the participant controls the Facts, the Route
-Engine controls sequencing, and every change remains explainable. Pathfinder is
-responsive, production deployed, and tested across its Route Engine, APIs,
-security boundaries, and user journey.
+AI can propose information, but it cannot make a Fact true or sequence the Route. This transit-pass item is still Proposed, and the Focus Action stays unchanged until I review it.
 
-I built this as a forward-deployed response to a real operational problem in
-reentry: helping people see not everything they could do, but the next thing
-that unlocks meaningful progress. I am looking for mission-aligned partners to
-pilot and strengthen it.
+After I confirm it, the engine recomputes from Confirmed Facts and records another structured Reroute. That separation is deliberate: the participant controls the Facts; the Route Engine controls sequencing.
+
+Pathfinder preserves every change in Route History, works on mobile, and is production deployed with automated tests across the engine, APIs, security boundaries, and user journey. I built it as a forward-deployed response to a reentry bottleneck, and I am seeking mission-aligned pilot partners.
+<!-- demo-video-narration:end -->
+
+The first-person click language is intentional but restrained. It tells the
+viewer what consequential action is occurring without narrating every piece of
+mouse mechanics.
 
 ## Live Demo Preflight
 
@@ -86,47 +87,73 @@ Complete this checklist on the presentation machine:
 1. Confirm the production health check and custom domain are green.
 2. Sign in before the presentation. Do not depend on receiving a magic link on
    stage.
-3. Open Account, choose SD-001, confirm replacement, and select `Load this
+3. Open Account, choose SD-008, confirm replacement, and select `Load this
    demonstration`.
 4. Confirm that the Focus Action is `Obtain a state identification card` and
    that three Unlocks are visible.
 5. Silence notifications and close email, messages, terminals, password
    managers, bookmarks, and unrelated browser tabs.
 6. Set the browser to 100% zoom and use a 16:9 display mode.
-7. Rehearse the exact cursor path twice without narration, then twice with the
-   final voiceover.
-8. Keep the exported MP4 and the verified screenshots available locally as the
-   fallback.
+7. In OBS's macOS Screen Capture source, verify `Show cursor` is on. Set the
+   macOS pointer to approximately 160% with a white fill and dark outline.
+8. Rehearse the exact cursor path twice without narration, then twice with the
+   final voiceover. Use 600-900 millisecond eased moves, pause 300-500
+   milliseconds before consequential clicks, and hold 600-1000 milliseconds
+   afterward.
+9. Record the four consequential clicks in the manifest: complete, open the
+   Proposed Fact review, confirm, and open Route History. Cut around purely
+   mechanical navigation.
+10. Keep the exported MP4 and the verified screenshots available locally as the
+    fallback.
 
 If the live application is unavailable, state that the production health check
 was completed before the event and play the local 90-second MP4. Do not debug on
 stage.
 
-## No-Cost Video Production Workflow
+## Recommended Video Production Workflow
 
-The recommended single AI-assisted editor is CapCut Desktop because it combines
-timeline editing, automatic captions, and text-to-speech in a free desktop
-workflow. The preferred voice is the presenter's own voice; it communicates
-authenticity and avoids an artificial pitch.
+Use the installed zero-new-subscription stack: OBS Studio for capture, DaVinci
+Resolve for the final edit, FFmpeg for technical verification, and the Figma
+board plus manifest for editorial control. DaVinci is now preferred over CapCut
+because its free desktop edition provides precise keyframes, subtitles, color,
+and Fairlight audio without making cloud processing part of the workflow.
+CapCut remains an optional convenience editor for non-sensitive material, not
+the governed default.
 
-1. Record the application window with OBS Studio at 1920 by 1080, 30 frames per
-   second. Capture two complete silent takes. Do not record browser chrome or
-   personal information.
-2. Record the final voiceover separately in a quiet, soft room. Keep the
-   microphone six to eight inches away and speak at a measured conversational
-   pace.
-3. Process only the narration through Adobe Podcast Enhance Speech. Compare the
-   result with the original and reject the enhanced version if it introduces
-   artifacts.
-4. Assemble the strongest screen take and narration in CapCut Desktop. Use
-   automatic captions, then manually correct every word and protected term.
-5. Use simple cuts, brief cross-dissolves, and 105-115% punch-ins on the Focus
-   Action, Unlocks, and Reroute differences. Do not use avatars, stock footage,
-   decorative AI imagery, or template-heavy transitions.
-6. Keep narration near -14 LUFS integrated with peaks below -1 dB. Optional
-   music should remain near -30 dB and duck under every important line.
-7. Export an H.264 MP4 at 1920 by 1080, 30 frames per second, 16-20 Mbps video,
-   and AAC audio at 48 kHz. Watch the exported file from beginning to end.
+1. Record the real application window with OBS Studio at 1920 by 1080 and 30
+   frames per second. Capture two complete silent takes with `Show cursor` on.
+   Do not record browser chrome, personal information, or production data.
+2. Follow the manifest's four semantic click cues. Move directly with ease-in
+   and ease-out, dwell before and after each click, and never circle or shake the
+   pointer. Park it at an edge when the viewer should read.
+3. In DaVinci Resolve, add a 58-pixel Pathfinder-spruce ring at 45% opacity for
+   300 milliseconds on each semantic click. Do not pulse continuously. Use
+   105-115% punch-ins only on the Focus Action, Unlocks, and Reroute details.
+4. Record a clean 60-90 second voice sample and the final narration in a quiet,
+   soft room, six to eight inches from the microphone. Authentic recorded voice
+   remains the fallback and should be kept even if cloning is used.
+5. If the presenter chooses the cloned-voice path, use MiniMax Speech 2.8 HD
+   only with the presenter's explicit consent. Voice cloning requires a direct
+   MiniMax workflow because `mmx` 1.0.18 does not expose a clone command. Obtain
+   action-time approval immediately before uploading the source recording and
+   accepting the metered cloning charge. Use the clone for the approved script
+   and small pickup lines, then compare it blind against the real recording.
+6. Assemble footage and narration in DaVinci Resolve. Create captions from the
+   approved transcript or import an SRT, then manually correct every protected
+   term: Fact, Confirmed Fact, Proposed Fact, Route, Focus Action, and Reroute.
+7. Use simple cuts and brief cross-dissolves. Do not use avatars, stock footage,
+   generated application UI, decorative AI imagery, or template-heavy
+   transitions. MiniMax Hailuo and Music are intentionally outside the critical
+   path; the product and explanation should carry the pitch.
+8. Keep narration near -14 LUFS integrated with peaks below -1 dB. If music is
+   added after a voice-only review, keep it near -30 dB and duck it under every
+   important line.
+9. Export an H.264 MP4 at 1920 by 1080, 30 frames per second, 16-20 Mbps video,
+   and AAC audio at 48 kHz. Verify duration, codec, resolution, frame rate, and
+   audio streams with `ffprobe`, then watch the export from beginning to end.
+
+The full tool and security analysis is recorded in
+[Demo Video Production Audit](demo-video-production-audit.md).
 
 ## Judge Drill-Down
 
@@ -156,9 +183,12 @@ sequence, confirm, or reject product data.
 
 The Demo Day package is ready when:
 
-1. SD-001 can be reset and replayed from Account.
+1. SD-008 can be reset and replayed from Account.
 2. The timed journey completes without improvisation.
 3. The voiceover fits within 90 seconds at a natural pace.
 4. The final MP4 is captioned, locally available, and watched end to end.
 5. Production health and the custom domain are green.
 6. Every claim stays inside the documented evidence boundary.
+7. `node scripts/validate_demo_video_manifest.mjs` passes.
+8. The four semantic clicks have a visible cursor, eased movement, dwell, and a
+   brief click ring.
