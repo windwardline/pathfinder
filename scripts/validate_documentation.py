@@ -23,7 +23,7 @@ EXPECTED_COUNTS = {
     "docs/07-api": 5,
     "docs/08-data": 4,
     "docs/09-testing": 6,
-    "docs/10-operations": 8,
+    "docs/10-operations": 9,
     "docs/11-implementation": 10,
 }
 
