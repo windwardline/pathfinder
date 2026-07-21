@@ -1,0 +1,243 @@
+{
+  "version": "1.0",
+  "title": "Pathfinder Demo Day 90-Second Video",
+  "durationSeconds": 90,
+  "scenarioId": "SD-008",
+  "storyboardUrl": "https://www.figma.com/board/hlrY9M2zrlWVgA9NFAT4GA",
+  "productionStack": {
+    "voiceClone": {
+      "provider": "ElevenLabs",
+      "plan": "Starter",
+      "method": "Instant Voice Cloning",
+      "exportMode": "audio-only",
+      "sourceConsentRequired": true
+    },
+    "screenCapture": {
+      "application": "OBS Studio",
+      "source": "real Pathfinder application footage"
+    },
+    "finalEdit": {
+      "application": "DaVinci Resolve",
+      "edition": "Free"
+    },
+    "assetLayer": {
+      "primaryProvider": "Mixkit",
+      "cost": "free",
+      "watermarkFree": true,
+      "attributionRequired": false,
+      "uses": [
+        "music",
+        "sound effects",
+        "DaVinci Resolve templates"
+      ],
+      "fallbackProvider": "Uppbeat Creator",
+      "fallbackRequiresApproval": true
+    },
+    "excludedFromFinalVideo": [
+      "Artlist Max",
+      "MiniMax Speech",
+      "MiniMax Hailuo",
+      "MiniMax Music",
+      "generated Pathfinder UI"
+    ]
+  },
+  "capture": {
+    "source": "real Pathfinder application footage",
+    "resolution": "1920x1080",
+    "framesPerSecond": 30,
+    "captureCursor": true,
+    "cursorScale": 1.6,
+    "cursorFill": "#FFFFFF",
+    "cursorOutline": "#0F3D36",
+    "clickRingColor": "#4CA893",
+    "clickRingDiameterPixels": 58,
+    "clickRingOpacity": 0.45
+  },
+  "beats": [
+    {
+      "id": "focus-action",
+      "startSeconds": 0,
+      "endSeconds": 16,
+      "screen": "Today view with the initial Focus Action, its explanation, and all three Unlocks visible.",
+      "exactScreenText": [
+        "Obtain a state identification card",
+        "Why it comes next.",
+        "Complete employment onboarding at Harbor Light Logistics",
+        "Open a checking account",
+        "Submit the housing application at Riverside Commons"
+      ],
+      "narration": "Reentry is not one checklist. Identification, employment, housing, and transportation can depend on one another. Pathfinder turns Confirmed Facts into a Route. Here, the Focus Action is to obtain a state identification card because it is a hard prerequisite that unlocks three next steps.",
+      "cursorCues": [
+        {
+          "atSeconds": 4,
+          "target": "Focus Action heading",
+          "xPercent": 40,
+          "yPercent": 31,
+          "movementMs": 800,
+          "click": false
+        },
+        {
+          "atSeconds": 11,
+          "target": "three Unlock chips",
+          "xPercent": 48,
+          "yPercent": 54,
+          "movementMs": 750,
+          "click": false
+        }
+      ]
+    },
+    {
+      "id": "completion-reroute",
+      "startSeconds": 16,
+      "endSeconds": 34,
+      "screen": "The completion click followed by the structured Reroute dialog; pause long enough to read the new focus and three newly available Actions.",
+      "exactScreenText": [
+        "Mark as complete",
+        "You completed an Action",
+        "Your new Focus Action",
+        "Became available",
+        "Complete employment onboarding at Harbor Light Logistics"
+      ],
+      "narration": "When I mark it complete, the deterministic Route Engine recalculates. This Reroute shows a new focus, all three Actions that became available, and the work that moved, so the participant can see exactly why the Route changed.",
+      "cursorCues": [
+        {
+          "atSeconds": 17,
+          "target": "Mark as complete button",
+          "xPercent": 34,
+          "yPercent": 62,
+          "movementMs": 800,
+          "click": true,
+          "preClickDwellMs": 350,
+          "postClickDwellMs": 800,
+          "ringDurationMs": 300,
+          "narrationCue": "When I mark it complete"
+        },
+        {
+          "atSeconds": 24,
+          "target": "Became available list",
+          "xPercent": 51,
+          "yPercent": 56,
+          "movementMs": 700,
+          "click": false
+        }
+      ]
+    },
+    {
+      "id": "proposed-fact-boundary",
+      "startSeconds": 34,
+      "endSeconds": 50,
+      "screen": "Return to Today, preserve the new Focus Action, show the Proposed Fact banner, then open the proposed transit-pass card.",
+      "exactScreenText": [
+        "Complete employment onboarding at Harbor Light Logistics",
+        "1 Proposed Fact awaiting your review.",
+        "Proposed Facts don't affect your Route until you confirm them.",
+        "Apply for a transit pass",
+        "Proposed Fact"
+      ],
+      "narration": "AI can propose information, but it cannot make a Fact true or sequence the Route. This transit-pass item is still Proposed, and the Focus Action stays unchanged until I review it.",
+      "cursorCues": [
+        {
+          "atSeconds": 42,
+          "target": "Proposed Fact review banner",
+          "xPercent": 51,
+          "yPercent": 18,
+          "movementMs": 750,
+          "click": true,
+          "preClickDwellMs": 350,
+          "postClickDwellMs": 800,
+          "ringDurationMs": 300,
+          "narrationCue": "This transit-pass item is still Proposed"
+        },
+        {
+          "atSeconds": 46,
+          "target": "Apply for a transit pass card",
+          "xPercent": 45,
+          "yPercent": 45,
+          "movementMs": 700,
+          "click": false
+        }
+      ]
+    },
+    {
+      "id": "confirmation-reroute",
+      "startSeconds": 50,
+      "endSeconds": 68,
+      "screen": "Confirm the transit-pass Proposed Fact and hold on the resulting structured Reroute.",
+      "exactScreenText": [
+        "Confirm",
+        "You confirmed a fact",
+        "Added to your Route",
+        "Apply for a transit pass",
+        "Moved"
+      ],
+      "narration": "After I confirm it, the engine recomputes from Confirmed Facts and records another structured Reroute. That separation is deliberate: the participant controls the Facts; the Route Engine controls sequencing.",
+      "cursorCues": [
+        {
+          "atSeconds": 52,
+          "target": "Confirm button on the transit-pass card",
+          "xPercent": 39,
+          "yPercent": 63,
+          "movementMs": 800,
+          "click": true,
+          "preClickDwellMs": 400,
+          "postClickDwellMs": 850,
+          "ringDurationMs": 300,
+          "narrationCue": "After I confirm it"
+        },
+        {
+          "atSeconds": 59,
+          "target": "Added to your Route difference",
+          "xPercent": 51,
+          "yPercent": 48,
+          "movementMs": 700,
+          "click": false
+        }
+      ]
+    },
+    {
+      "id": "production-close",
+      "startSeconds": 68,
+      "endSeconds": 90,
+      "screen": "Show Route History with all structured events, cut to the 390-pixel responsive Today view, and finish on the Pathfinder wordmark and production domain.",
+      "exactScreenText": [
+        "Route History",
+        "How your Route has changed",
+        "Action completed",
+        "Fact confirmed",
+        "What comes next",
+        "pathfinder.windwardline.com"
+      ],
+      "narration": "Pathfinder preserves every change in Route History, works on mobile, and is production deployed with automated tests across the engine, APIs, security boundaries, and user journey. I built it as a forward-deployed response to a reentry bottleneck, and I am seeking mission-aligned pilot partners.",
+      "cursorCues": [
+        {
+          "atSeconds": 70,
+          "target": "Route History navigation link",
+          "xPercent": 7,
+          "yPercent": 20,
+          "movementMs": 800,
+          "click": true,
+          "preClickDwellMs": 350,
+          "postClickDwellMs": 800,
+          "ringDurationMs": 300,
+          "narrationCue": "Route History"
+        },
+        {
+          "atSeconds": 78,
+          "target": "structured History differences",
+          "xPercent": 44,
+          "yPercent": 45,
+          "movementMs": 750,
+          "click": false
+        },
+        {
+          "atSeconds": 87,
+          "target": "production domain closing card",
+          "xPercent": 50,
+          "yPercent": 73,
+          "movementMs": 700,
+          "click": false
+        }
+      ]
+    }
+  ]
+}

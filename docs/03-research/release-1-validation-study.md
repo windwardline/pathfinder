@@ -1,7 +1,7 @@
 # Release 1 Validation Study
 
 **Version:** 1.0  
-**Status:** Participant sessions in progress  
+**Status:** Deferred; no participant sessions completed  
 **Owner:** Product Research
 
 ## Purpose
@@ -9,6 +9,13 @@
 This is the de-identified evidence record for H1 through H4 in
 [Validation Strategy](validation.md). Automated tests cannot complete this
 study. Only observed participant sessions may be recorded as results.
+
+Participant recruitment and facilitation are not available before the current
+Demo Day milestone. The study is therefore outside the pre-demo critical path.
+This scheduling constraint does not convert technical verification into human
+product validation, and it does not authorize any comprehension, trust,
+cognitive-load, or outcome claim. The protocol remains available for a future
+partner-led study if access becomes feasible.
 
 ## Participant Safety and Data Rules
 
@@ -56,4 +63,3 @@ After sessions, report the sample, recruitment limitations, task success rates,
 median completion time, checklist comparison, confidence distribution,
 accessibility observations, adverse findings, and the Product Decisions created
 from evidence. Do not generalize beyond the observed sample.
-

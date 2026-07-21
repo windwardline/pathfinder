@@ -23,7 +23,7 @@ EXPECTED_COUNTS = {
     "docs/07-api": 5,
     "docs/08-data": 4,
     "docs/09-testing": 6,
-    "docs/10-operations": 7,
+    "docs/10-operations": 9,
     "docs/11-implementation": 10,
 }
 
@@ -126,8 +126,12 @@ def validate() -> list[str]:
                 f"{relative} contains {len(files)} Markdown files; expected {expected_count}"
             )
 
-    if len(corpus_files) != 70:
-        errors.append(f"canonical corpus contains {len(corpus_files)} files; expected 70")
+    expected_corpus_count = sum(EXPECTED_COUNTS.values())
+    if len(corpus_files) != expected_corpus_count:
+        errors.append(
+            f"canonical corpus contains {len(corpus_files)} files; "
+            f"expected {expected_corpus_count}"
+        )
 
     direct_docs = sorted((ROOT / "docs").glob("*.md"))
     if direct_docs:
@@ -176,7 +180,7 @@ def main() -> int:
         return 1
 
     print("Documentation validation passed")
-    print("- 70 canonical Markdown files")
+    print(f"- {sum(EXPECTED_COUNTS.values())} canonical Markdown files")
     print("- 12 indexed documentation categories")
     print("- protected architecture and trust language present")
     print("- local Markdown links resolve")
