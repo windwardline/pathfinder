@@ -1,6 +1,6 @@
 # Demo Video Production Audit
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Status:** Approved Demo Day Production Decision  
 **Audit date:** July 20, 2026  
 **Owner:** Product, Engineering & Presentation
@@ -14,15 +14,18 @@ Pathfinder's best current 90-second production stack is:
 3. OBS Studio for real application capture.
 4. DaVinci Resolve for local editing, cursor treatment, captions, color, and
    audio finishing.
-5. MiniMax Speech 2.8 HD for an explicitly consented clone of the presenter's
-   own voice, with the authentic recording retained as the fallback.
-6. FFmpeg and `ffprobe` for deterministic media verification.
+5. ElevenLabs Starter with Instant Voice Cloning for an explicitly consented
+   clone of the presenter's own voice, with the authentic recording retained as
+   the fallback and audio-only export into DaVinci.
+6. DaVinci's native effects plus Mixkit Free License music, sound effects, and
+   DaVinci templates as the no-watermark Artlist Max alternative.
+7. FFmpeg and `ffprobe` for deterministic media verification.
 
-This is a zero-new-subscription workflow. MiniMax rapid voice cloning is a
-metered exception rather than a subscription; the published pay-as-you-go
-price at the audit date is $1.50 per cloned voice, with synthesis billed by
-usage. The charge and the upload of the source recording require separate
-action-time approval.
+The planned cost is one $6 ElevenLabs Starter month. The visual and audio asset
+layer costs $0. If Mixkit fails an editorial review, one month of Uppbeat
+Creator is the approval-gated fallback; its published monthly price was $9.99
+at the audit date, but checkout remains authoritative. Artlist Max is not
+needed for this 90-second product proof.
 
 ## Evidence Reviewed
 
@@ -39,7 +42,8 @@ The audit compared:
 - the local real-application capture takes and their 89.97-second technical
   rough cut; and
 - official documentation for OBS, Apple pointer accessibility, DaVinci Resolve,
-  MiniMax voice cloning and pricing, CapCut privacy, and Camtasia cursor tools.
+  ElevenLabs voice cloning and pricing, Mixkit licenses and assets, Uppbeat
+  pricing and licensing, CapCut privacy, and Camtasia cursor tools.
 
 ## Findings and Corrections
 
@@ -112,15 +116,36 @@ not actually demonstrated. Hailuo remains useful for unrelated creative work,
 not this product proof. MiniMax Music is also outside the critical path; a
 voice-first mix is clearer and safer in a 90-second pitch.
 
+### 6. Artlist Max is unnecessary for this cut
+
+Artlist Max bundles far more footage, templates, AI generation, and stock media
+than this product demonstration should use. Pathfinder needs one score, at most
+two restrained sound effects, a branded opener and close, clean transitions,
+captions, and color consistency. DaVinci Resolve Free already supplies more
+than 100 transitions, more than 100 customizable Fusion titles, keyframing,
+subtitles, color, and Fairlight audio tools. Mixkit adds free music, sound
+effects, and DaVinci templates without required attribution; its Free License
+assets and stock footage downloads are watermark-free.
+
+The professional result comes from restraint and system coherence, not asset
+volume. The final cut uses one musical idea, one motion language, real product
+footage, and Pathfinder's existing brand. Mixkit is therefore the primary asset
+source. Uppbeat Creator is the closest economical all-in-one fallback because
+it adds music, sound effects, motion graphics, stock video, and LUTs, but it is
+not purchased unless a specific free asset fails editorial review.
+
 ## Tool Fit and Security
 
 | Tool | Audited local version | Governed role | Decision |
 |---|---:|---|---|
 | OBS Studio | 32.1.2 | Capture the real app and cursor | Keep; official macOS capture exposes `Show cursor` and defaults it on. |
 | DaVinci Resolve | 21.0.2 free | Primary edit, captions, cursor ring, color, and Fairlight audio | Use as the final editor; its free edition supports the required 1080p30 workflow. |
+| ElevenLabs | Starter | Presenter's consented Instant Voice Clone | Use for audio-only narration; keep the authentic recording and reject any less-credible clone. |
+| Mixkit | Free License assets | Music, no more than two SFX, and optional DaVinci template | Primary asset library; record each item URL and license, and accept only watermark-free assets. |
+| Uppbeat | Creator, optional | Paid music, motion graphics, or LUT fallback | Do not buy by default; one month requires approval and a named asset that Mixkit cannot replace. |
 | FFmpeg | 8.1.2 | Inspect and verify final media | Keep as the non-creative verification gate. |
 | CapCut Desktop | 3.3.0 | Optional convenience edit only | Do not use for sensitive voice or participant material; its policy permits collection and analysis of imported video and audio, including pre-upload for features such as captions. |
-| MiniMax CLI | 1.0.18 | Optional multimodal generation and Speech 2.8 synthesis | Keep, but its current speech command does not expose voice cloning. Use the official direct workflow for cloning. |
+| MiniMax CLI | 1.0.18 | Optional multimodal generation outside the governed video | Keep available for other work; do not use Speech, Hailuo, Music, or generated Pathfinder UI in the final cut. |
 | Figma | Connected board | Storyboard and shot authority | Keep; the board and manifest use the same five timed panels. |
 | Zapier | Connected | Post-event, privacy-safe follow-up | Exclude from capture and playback; it adds no value to the deterministic product proof. |
 
@@ -168,15 +193,22 @@ skill review.
 
 The source recording is personal voice data. It may be uploaded only after the
 presenter identifies the exact file and explicitly approves sending it to
-MiniMax. No participant audio, app data, credentials, browser sessions, or
+ElevenLabs. No participant audio, app data, credentials, browser sessions, or
 private documents may accompany it.
 
-MiniMax's official requirements currently allow MP3, M4A, or WAV source audio
-from 10 seconds to 5 minutes and no larger than 20 MB. A clean 60-90 second WAV
-is the recommended input. The clone is temporary unless used for synthesis
-within seven days. Preserve the authentic narration take, compare both versions
-for artifacts and authenticity, and publish the real recording if the clone is
-less convincing.
+ElevenLabs says Instant Voice Cloning is available immediately and can produce
+a usable clone from less than two minutes of audio, while the reference
+recording determines the quality ceiling. A clean, varied 60-90 second WAV is
+the recommended input. Starter includes Instant Voice Cloning, a commercial
+license, 30,000 monthly credits, and roughly 30 minutes of speech. Generate and
+export narration as audio-only paragraph segments. Preserve the authentic take,
+compare both versions for artifacts and authenticity, and publish the real
+recording if the clone is less convincing.
+
+Professional Voice Cloning is deliberately not the default. ElevenLabs places
+it on Creator and recommends approximately 30 minutes of high-quality source
+audio. Upgrade only if Instant Voice Cloning fails the voice review and the
+additional recording and training time are justified.
 
 ## External Sources
 
@@ -184,9 +216,14 @@ less convincing.
 - [Apple: Make the pointer easier to see](https://support.apple.com/guide/mac-help/make-the-pointer-easier-to-see-mchlp2920/mac)
 - [Blackmagic Design: DaVinci Resolve Edit](https://www.blackmagicdesign.com/products/davinciresolve/edit)
 - [Blackmagic Design: DaVinci Resolve editions](https://www.blackmagicdesign.com/products/davinciresolve)
-- [MiniMax API overview and voice cloning](https://platform.minimax.io/docs/api-reference/api-overview)
-- [MiniMax Voice Clone API](https://platform.minimax.io/docs/api-reference/voice-cloning-clone)
-- [MiniMax pay-as-you-go pricing](https://platform.minimax.io/subscribe/token-plan?tab=api-enterprise)
+- [ElevenLabs pricing](https://elevenlabs.io/pricing)
+- [ElevenLabs voice cloning](https://elevenlabs.io/docs/eleven-api/concepts/voice-cloning)
+- [Mixkit licenses](https://mixkit.co/license/)
+- [Mixkit music](https://mixkit.co/free-stock-music/)
+- [Mixkit sound effects](https://mixkit.co/free-sound-effects/)
+- [Mixkit DaVinci templates](https://mixkit.co/free-video-templates/davinci-resolve/)
+- [Uppbeat pricing](https://uppbeat.io/pricing)
+- [Uppbeat user agreement](https://uppbeat.io/user-agreement)
 - [CapCut Privacy Policy](https://www.capcut.com/clause/privacy-policy?enter_from=footer&from_page=landing_page&lang=en&store_region=US)
 - [TechSmith Camtasia cursor features](https://www.techsmith.com/camtasia/features/)
 - [Public MiniMax skill audit](https://skills.sh/api/v1/skills/audit/minimax-ai/cli/mmx-cli)
@@ -205,3 +242,5 @@ The final video is ready only when:
 6. The final file is watched end to end with headphones and speakers.
 7. No production data, personal information, secrets, unsupported claims, or
    generated product UI appears.
+8. The export contains no watermark, and the source URL plus applicable license
+   record is saved for every third-party asset.

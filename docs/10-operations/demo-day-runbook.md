@@ -1,6 +1,6 @@
 # Demo Day Runbook
 
-**Version:** 1.1  
+**Version:** 1.2  
 **Status:** Active Demo Day Procedure  
 **Owner:** Product & Engineering
 
@@ -112,13 +112,14 @@ stage.
 
 ## Recommended Video Production Workflow
 
-Use the installed zero-new-subscription stack: OBS Studio for capture, DaVinci
-Resolve for the final edit, FFmpeg for technical verification, and the Figma
-board plus manifest for editorial control. DaVinci is now preferred over CapCut
-because its free desktop edition provides precise keyframes, subtitles, color,
-and Fairlight audio without making cloud processing part of the workflow.
-CapCut remains an optional convenience editor for non-sensitive material, not
-the governed default.
+Use the locked production stack: ElevenLabs Starter for the presenter's voice
+clone, OBS Studio for real application capture, DaVinci Resolve Free for the
+final edit, Mixkit for watermark-free licensed assets, FFmpeg for technical
+verification, and the Figma board plus manifest for editorial control. DaVinci
+is preferred over CapCut because its free desktop edition provides precise
+keyframes, professional titles and transitions, Fusion motion graphics,
+subtitles, color, and Fairlight audio without making cloud processing part of
+the workflow. CapCut remains outside the governed final-video path.
 
 1. Record the real application window with OBS Studio at 1920 by 1080 and 30
    frames per second. Capture two complete silent takes with `Show cursor` on.
@@ -131,24 +132,37 @@ the governed default.
    105-115% punch-ins only on the Focus Action, Unlocks, and Reroute details.
 4. Record a clean 60-90 second voice sample and the final narration in a quiet,
    soft room, six to eight inches from the microphone. Authentic recorded voice
-   remains the fallback and should be kept even if cloning is used.
-5. If the presenter chooses the cloned-voice path, use MiniMax Speech 2.8 HD
-   only with the presenter's explicit consent. Voice cloning requires a direct
-   MiniMax workflow because `mmx` 1.0.18 does not expose a clone command. Obtain
-   action-time approval immediately before uploading the source recording and
-   accepting the metered cloning charge. Use the clone for the approved script
-   and small pickup lines, then compare it blind against the real recording.
+   remains the fallback and must be kept even when the clone is used.
+5. Use ElevenLabs Starter and Instant Voice Cloning for the approved narration.
+   Obtain action-time approval immediately before uploading the identified
+   source recording. Export audio only; do not use ElevenLabs video or dubbing
+   export. Generate paragraph-sized segments so a timing or pronunciation fix
+   does not require regenerating the entire script. Compare the clone against
+   the authentic recording and use the real take if the clone sounds less
+   credible.
 6. Assemble footage and narration in DaVinci Resolve. Create captions from the
    approved transcript or import an SRT, then manually correct every protected
    term: Fact, Confirmed Fact, Proposed Fact, Route, Focus Action, and Reroute.
-7. Use simple cuts and brief cross-dissolves. Do not use avatars, stock footage,
-   generated application UI, decorative AI imagery, or template-heavy
-   transitions. MiniMax Hailuo and Music are intentionally outside the critical
-   path; the product and explanation should carry the pitch.
-8. Keep narration near -14 LUFS integrated with peaks below -1 dB. If music is
-   added after a voice-only review, keep it near -30 dB and duck it under every
-   important line.
-9. Export an H.264 MP4 at 1920 by 1080, 30 frames per second, 16-20 Mbps video,
+7. Build the 0-3 second intro and 86-90 second close in DaVinci from the
+   Pathfinder wordmark, spruce accent, and production domain. Use DaVinci's
+   native Fusion titles and transitions first. A Mixkit DaVinci template may be
+   used only after removing generic decoration and matching the Pathfinder type,
+   color, spacing, and motion language.
+8. Select one Mixkit music track and no more than two restrained Mixkit sound
+   effects. Confirm that every selected item carries the applicable Mixkit Free
+   License, then save its source URL, download date, and a copy or screenshot of
+   the license with the video project. Do not use stock footage of participants
+   or generated Pathfinder UI; real product footage remains the proof.
+9. Keep narration near -14 LUFS integrated with peaks below -1 dB. Keep music
+   near -30 dB under narration, raise it only for the short intro and close, and
+   duck it under every important line. Use a subtle click sound only when it
+   reinforces one of the four semantic clicks.
+10. If Mixkit cannot supply one excellent score or restrained motion element,
+    pause for approval before buying one month of Uppbeat Creator. It is the
+    only governed paid fallback; do not subscribe to Artlist Max for this video.
+    Save the asset and license record while the subscription is active. Confirm
+    the checkout price and terms immediately before purchase.
+11. Export an H.264 MP4 at 1920 by 1080, 30 frames per second, 16-20 Mbps video,
    and AAC audio at 48 kHz. Verify duration, codec, resolution, frame rate, and
    audio streams with `ffprobe`, then watch the export from beginning to end.
 
@@ -192,3 +206,5 @@ The Demo Day package is ready when:
 7. `node scripts/validate_demo_video_manifest.mjs` passes.
 8. The four semantic clicks have a visible cursor, eased movement, dwell, and a
    brief click ring.
+9. The export contains no watermark, and every third-party asset has a saved
+   source URL and license record.

@@ -38,6 +38,27 @@ test('the canonical 90-second manifest is screen, narration, and cursor aligned'
   assert.match(result.stdout, /5 contiguous storyboard beats/);
   assert.match(result.stdout, /90 seconds/);
   assert.match(result.stdout, /cursor cues satisfy the visibility contract/);
+  assert.match(result.stdout, /production stack is locked and watermark-free/);
+});
+
+test('a different voice-clone provider fails the locked production stack', async () => {
+  const candidate = await mutateManifest(manifest => {
+    manifest.productionStack.voiceClone.provider = 'MiniMax';
+  });
+  const result = validate(candidate);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /ElevenLabs/);
+});
+
+test('a watermarked asset source fails the locked production stack', async () => {
+  const candidate = await mutateManifest(manifest => {
+    manifest.productionStack.assetLayer.watermarkFree = false;
+  });
+  const result = validate(candidate);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /watermark-free/);
 });
 
 test('a timeline gap fails validation', async () => {
