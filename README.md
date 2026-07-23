@@ -2,6 +2,8 @@
 
 Pathfinder builds and continuously updates a user's Reentry Route. It shows what comes next, why it comes next, and what it unlocks.
 
+An independent product, built end-to-end and run in production. It is also the first proof of [Refactored](https://wearerefactored.com), a venture in foundation.
+
 ## Repository Status
 
 - Product baseline: Version 2 Design Freeze
