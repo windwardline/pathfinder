@@ -5,10 +5,13 @@ packages:
 
 blockExoticSubdeps: true
 minimumReleaseAge: 10080
+minimumReleaseAgeExclude:
+  - next
+  - '@next/*'
 trustPolicy: no-downgrade
 
 overrides:
   '@auth/core>cookie': 0.7.2
   '@esbuild-kit/core-utils>esbuild': 0.25.12
-  'next@16.2.10>postcss': 8.5.10
-  'next@16.2.10>sharp': 0.35.3
+  'next@16.2.11>postcss': 8.5.10
+  'next@16.2.11>sharp': 0.35.3

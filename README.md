@@ -9,7 +9,7 @@ Pathfinder builds and continuously updates a user's Reentry Route. It shows what
 - Current phase: Release 1.2 production release
 - Live product: [pathfinder.windwardline.com](https://pathfinder.windwardline.com)
 - Canonical source: Markdown documentation in [`docs/`](docs/)
-- Demo takes: [`docs/demo/`](docs/demo/)
+- Demo Day film: [`docs/demo/`](docs/demo/)
 
 [![CI](https://github.com/windwardline/pathfinder/actions/workflows/ci.yml/badge.svg)](https://github.com/windwardline/pathfinder/actions/workflows/ci.yml)
 [![Security analysis](https://github.com/windwardline/pathfinder/actions/workflows/security.yml/badge.svg)](https://github.com/windwardline/pathfinder/actions/workflows/security.yml)
