@@ -994,7 +994,7 @@ def frame_at(t: float) -> Image.Image:
 def main():
     outdir = ROOT.parent / "exports"
     outdir.mkdir(exist_ok=True)
-    out = outdir / "Pathfinder-Marcus-90s-MASTER.mp4"
+    out = outdir / "Pathfinder-Marcus-90s-FINAL-CUT.mp4"
     enc = subprocess.Popen([
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
         "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{WIDTH}x{HEIGHT}", "-r", str(FPS), "-i", "-",
