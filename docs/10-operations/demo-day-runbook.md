@@ -17,8 +17,8 @@ The demonstration must make one distinction memorable:
 > Confirmed Facts. The deterministic Route Engine controls sequencing.
 
 The 90-second film and its full production kit live in
-[`docs/demo/`](../demo/README.md). The master is
-`docs/demo/refactored-90s/exports/Pathfinder-Marcus-90s-MASTER.mp4`.
+[`docs/demo/`](../demo/README.md). The final cut is
+`docs/demo/refactored-90s/exports/Pathfinder-Marcus-90s-FINAL-CUT.mp4`.
 
 ## Evidence Boundary
 
@@ -87,8 +87,8 @@ Complete this checklist on the presentation machine:
    milliseconds afterward. The four consequential clicks are: complete the
    Focus Action, open the Proposed Fact review, confirm, and open Route
    History.
-9. Keep the film master available locally as the fallback:
-   `docs/demo/refactored-90s/exports/Pathfinder-Marcus-90s-MASTER.mp4`.
+9. Keep the final cut available locally as the fallback:
+   `docs/demo/refactored-90s/exports/Pathfinder-Marcus-90s-FINAL-CUT.mp4`.
 
 If the live application is unavailable, state that the production health check
 was completed before the event and play the local 90-second MP4. Do not debug on
@@ -115,7 +115,7 @@ is documented in [`docs/demo/README.md`](../demo/README.md).
 4. Music and foley: an original composed score (ElevenLabs music) ducked under
    narration by sidechain compression, plus five subtle diegetic effects —
    dawn birds, bus hum, one click, keys, crickets.
-5. Master verification: exact 90.000-second duration, complete clean decode,
+5. Final-cut verification: exact 90.000-second duration, complete clean decode,
    −13.8 LUFS integrated, −0.9 dBTP true peak, spot frames across all scenes.
 
 ## Judge Drill-Down
@@ -148,7 +148,7 @@ The Demo Day package is ready when:
 
 1. SD-008 can be reset and replayed from Account.
 2. The timed journey completes without improvisation.
-3. The film master is exactly 90.000 seconds, locally available, and watched
+3. The final cut is exactly 90.000 seconds, locally available, and watched
    end to end.
 4. Production health and the custom domain are green.
 5. Every claim stays inside the documented evidence boundary.

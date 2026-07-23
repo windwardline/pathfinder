@@ -6,7 +6,7 @@
 
 ## Purpose
 
-This document is the master index for the Pathfinder Product Operating System. It identifies the authoritative documentation layers, each artifact's purpose, governance role, ownership, and primary dependencies.
+This document is the canonical index for the Pathfinder Product Operating System. It identifies the authoritative documentation layers, each artifact's purpose, governance role, ownership, and primary dependencies.
 
 This index does not redefine product concepts. It helps contributors locate the single canonical source for each concept.
 

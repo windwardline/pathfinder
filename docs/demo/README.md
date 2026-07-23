@@ -5,8 +5,8 @@ the code it demonstrates.
 
 ## The film
 
-`refactored-90s/exports/Pathfinder-Marcus-90s-MASTER.mp4` — the 90.000-second
-Demo Day master. A hand-drawn ink-and-wash character story: Marcus leaves a
+`refactored-90s/exports/Pathfinder-Marcus-90s-FINAL-CUT.mp4` — the
+90.000-second Demo Day final cut. A hand-drawn ink-and-wash character story: Marcus leaves a
 correctional facility, meets the tangle of reentry requirements, and works
 Pathfinder's route one step at a time — state ID, warehouse job, apartment
 keys — over real product footage.
@@ -32,12 +32,12 @@ SD-008 scenario with fictional demo data; no UI is generated or reconstructed.
 | `captures2/` | 679 real product frames (SD-008, fictional data) the UI scenes composite from, plus the source recording |
 | `fonts/` | Newsreader statics and Geist Mono used by the renderers |
 
-Rebuild the master with:
+Rebuild the final cut with:
 
 ```sh
 python3 refactored-90s/build/render_marcus.py
 ```
 
 The renderer is deterministic: same inputs, pixel-identical frames. It writes
-`refactored-90s/exports/Pathfinder-Marcus-90s-MASTER.mp4` and requires Pillow
+`refactored-90s/exports/Pathfinder-Marcus-90s-FINAL-CUT.mp4` and requires Pillow
 and FFmpeg.
