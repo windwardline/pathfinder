@@ -13,7 +13,7 @@
     "db:reapply-deletions": "tsx src/db/reapply-deletions.ts"
   },
   "dependencies": {
-    "@auth/core": "^0.34.3",
+    "@auth/core": "^0.41.3",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.9"
   },
