@@ -1,7 +1,7 @@
 # Demo assets
 
-The Demo Day film and the production kit that builds it, versioned alongside
-the code it demonstrates.
+The Demo Day film, the presenter backdrops, and the production kits that build
+them, versioned alongside the code they demonstrate.
 
 ## The film
 
@@ -41,3 +41,27 @@ python3 refactored-90s/build/render_marcus.py
 The renderer is deterministic: same inputs, pixel-identical frames. It writes
 `refactored-90s/exports/Pathfinder-Marcus-90s-FINAL-CUT.mp4` and requires Pillow
 and FFmpeg.
+
+## Presenter backdrops — `backdrops/`
+
+Three 3840×2160 backgrounds for presenting over video. The presenter sits
+centred in frame, so each composition keeps the middle clear and works the
+brand into the corners and edges. All three draw on the application's own
+design tokens — paper, spruce, Newsreader, Geist Mono — so a call matches the
+product on screen.
+
+| File | The idea |
+|---|---|
+| `Pathfinder-Backdrop-Field-Guide.png` | Daylight paper with contour whispers; the dashed Route climbs the left edge and crosses the top to a star. Carries the value proposition. |
+| `Pathfinder-Backdrop-The-Way-Home.png` | The film's closing mood: night sky, a route rising to a lit window, a constellation of waypoints. |
+| `Pathfinder-Backdrop-Same-Facts-Same-Route.png` | The claim, drawn: a Dependency Graph on the left resolving into an ordered Route on the right. |
+
+Rebuild them with:
+
+```sh
+python3 backdrops/render_backdrops.py
+```
+
+Deterministic in the same way as the film renderer — same inputs, pixel-identical
+output, verified by checksum against the committed images. Requires Pillow, and
+reuses the brand fonts in `refactored-90s/build/fonts/`.
