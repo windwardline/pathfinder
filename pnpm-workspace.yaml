@@ -11,16 +11,32 @@ minimumReleaseAgeExclude:
   - '@auth/core'
   - next-auth
   - postcss
+  # Fix for GHSA-mh99-v99m-4gvg shipped 2026-07-23, one day before the
+  # advisory published — it cannot age past quarantine before we need it.
+  - brace-expansion
+
+overrides:
+  '@auth/core>cookie': 0.7.2
+  '@auth/drizzle-adapter>@auth/core': 0.41.3
+  '@esbuild-kit/core-utils>esbuild': 0.25.12
+  # Everything below 5.0.8 is vulnerable to GHSA-mh99-v99m-4gvg (DoS via
+  # unbounded expansion); no fixed 1.x exists, so force the whole tree to
+  # the single patched release. Both prior instances were dev-tool chains.
+  'brace-expansion': 5.0.8
+  'next@16.2.11>postcss': 8.5.18
+  'next@16.2.11>sharp': 0.35.3
+patchedDependencies:
+  brace-expansion@5.0.8: patches/brace-expansion@5.0.8.patch
 trustPolicy: no-downgrade
 trustPolicyExclude:
   # Security patch for four advisories (two CVSS 9.1); published without
   # provenance by the same npm account as the beta.31 already in production
   # (Better Auth team, post-Auth.js transition). Exact version only.
   - 'next-auth@5.0.0-beta.32'
-
-overrides:
-  '@auth/core>cookie': 0.7.2
-  '@auth/drizzle-adapter>@auth/core': 0.41.3
-  '@esbuild-kit/core-utils>esbuild': 0.25.12
-  'next@16.2.11>postcss': 8.5.18
-  'next@16.2.11>sharp': 0.35.3
+  # Both already in this lockfile and every production build (published
+  # 2026-05-25 and 2026-04-17); re-locked unchanged by the brace-expansion
+  # override below. Upstream trust tier dropped (Babel/Meta release-infra
+  # changes), no advisories or ecosystem reports as of 2026-07-25. Approved
+  # by Michael 2026-07-25. Exact versions only.
+  - '@babel/core@7.29.7'
+  - 'eslint-plugin-react-hooks@7.1.1'

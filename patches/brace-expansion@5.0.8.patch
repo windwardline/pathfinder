@@ -1,0 +1,19 @@
+diff --git a/dist/commonjs/index.js b/dist/commonjs/index.js
+index be9df86be09c7655787a65c55ae6da01858894c3..881da0c7bb72fc27e5cb7244c18da1fcfd1acf1b 100644
+--- a/dist/commonjs/index.js
++++ b/dist/commonjs/index.js
+@@ -260,4 +260,14 @@ function expand_(str, max, maxLength, isTop) {
+     }
+     return acc;
+ }
++// CJS interop: brace-expansion 1.x exported the function itself, and
++// minimatch@3 (pinned inside the eslint toolchain) calls require()'s return
++// value directly. Re-point module.exports at expand, keeping every published
++// export attached so namespace and ESM-interop consumers are unaffected.
++module.exports = expand;
++module.exports.expand = expand;
++module.exports.default = expand;
++module.exports.EXPANSION_MAX = exports.EXPANSION_MAX;
++module.exports.EXPANSION_MAX_LENGTH = exports.EXPANSION_MAX_LENGTH;
++module.exports.__esModule = true;
+ //# sourceMappingURL=index.js.map
