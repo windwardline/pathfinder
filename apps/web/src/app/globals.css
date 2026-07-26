@@ -46,7 +46,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --paper: #111815;
     --surface: #17201c;
     --raised: #1e2a25;
@@ -64,6 +64,44 @@
     --brick: #cf7460;
     --brick-soft: #362019;
   }
+}
+
+
+/* An explicit choice (the lamp) outranks the OS preference. */
+:root { color-scheme: light dark; }
+:root[data-theme='light'] {
+  color-scheme: light;
+  --paper: #fafaf7;
+  --surface: #ffffff;
+  --raised: #f2f2ec;
+  --hairline: #e3e3da;
+  --ink: #1c2321;
+  --ink-soft: #4d5854;
+  --ink-faint: #66706b;
+  --spruce: #17594e;
+  --spruce-soft: #e3efec;
+  --spruce-ink: #0f3d36;
+  --amber: #795416;
+  --amber-soft: #f6ecd9;
+  --brick: #a6432f;
+  --brick-soft: #f6e5e0;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #111815;
+  --surface: #17201c;
+  --raised: #1e2a25;
+  --hairline: #2b3833;
+  --ink: #e9efec;
+  --ink-soft: #a7b3ad;
+  --ink-faint: #8a9891;
+  --spruce: #4ca893;
+  --spruce-soft: #1a2f29;
+  --spruce-ink: #7cc7b5;
+  --amber: #d3a256;
+  --amber-soft: #33291a;
+  --brick: #cf7460;
+  --brick-soft: #362019;
 }
 
 body {

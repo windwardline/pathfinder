@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Compass, ListTree, FileCheck2, History, UserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ThemeLamp } from '@/components/ThemeLamp';
 import { SignOutButton } from './SignOutButton';
 
 const NAV = [
@@ -59,6 +60,7 @@ export function AppShell({
         </div>
 
         <div className="border-t border-hairline px-6 py-4">
+          <ThemeLamp className="-ml-2 mb-2" />
           <p className="truncate text-xs text-ink-faint" title={email}>
             {email}
           </p>
@@ -77,6 +79,7 @@ export function AppShell({
           </span>
           <span className="font-serif text-lg tracking-tight">Pathfinder</span>
         </Link>
+        <ThemeLamp />
       </div>
 
       {/* Mobile bottom tabs */}
