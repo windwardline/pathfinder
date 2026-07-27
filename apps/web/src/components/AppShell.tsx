@@ -27,7 +27,7 @@ export function AppShell({
         Skip to main content
       </a>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-60 shrink-0 flex-col justify-between border-r border-hairline">
+      <aside className="hidden md:sticky md:top-0 md:flex md:h-dvh w-60 shrink-0 flex-col justify-between overflow-y-auto border-r border-hairline">
         <div>
           <Link href="/" className="flex items-center gap-2.5 px-6 pt-7 pb-8">
             <span
