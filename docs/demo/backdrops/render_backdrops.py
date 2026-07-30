@@ -21,7 +21,7 @@ from pathlib import Path
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 HERE = Path(__file__).resolve().parent
-FONTS = HERE.parent / "refactored-90s" / "build" / "fonts"
+FONTS = HERE.parent / "pathfinder-90s" / "build" / "fonts"
 
 W, H = 3840, 2160
 

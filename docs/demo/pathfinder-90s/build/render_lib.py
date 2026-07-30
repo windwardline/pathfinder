@@ -1,8 +1,8 @@
-"""Refactored 90s film — brand render toolkit (Pillow).
+"""Pathfinder 90s film — brand render toolkit (Pillow).
 
 Everything cinematic in the film that isn't real product footage is drawn here at
-true 1080p: the deep-green field, the Pathfinder compass, the Refactored keystone,
-the wordmarks in the brand's own Newsreader, plus grade/vignette/grain.
+true 1080p: the deep-green field, the Pathfinder compass, the wordmarks in
+Newsreader, plus grade/vignette/grain.
 
 Run engine: Codex runtime python 3.12 (has Pillow 12).
 """
@@ -161,29 +161,6 @@ def _compass_inner(d_px: int) -> Image.Image:
     return tile.resize((d_px, d_px), Image.Resampling.LANCZOS)
 
 
-def _keystone_inner(d_px: int) -> Image.Image:
-    """Arch with piers and a spruce keystone, sized to the 100-unit box."""
-    D = d_px * SS
-
-    def P(x, y):
-        return (x / 100 * D, y / 100 * D)
-
-    tile = Image.new("RGBA", (D, D), (0, 0, 0, 0))
-    dr = ImageDraw.Draw(tile)
-    # piers
-    dr.rounded_rectangle([P(22, 49)[0], P(22, 49)[1], P(34, 76)[0], P(34, 76)[1]],
-                         radius=int(D * 0.02), fill=(*PAPER, 255))
-    dr.rounded_rectangle([P(66, 49)[0], P(66, 49)[1], P(78, 76)[0], P(78, 76)[1]],
-                         radius=int(D * 0.02), fill=(*PAPER, 255))
-    # arch band (semicircle) via pieslice stroke
-    aw = int(D * 0.11)
-    bbox = [P(28, 28)[0], P(28, 28)[1], P(72, 72)[0], P(72, 72)[1]]
-    dr.arc(bbox, start=180, end=360, fill=(*PAPER, 255), width=aw)
-    # keystone wedge
-    dr.polygon([P(37, 18), P(63, 18), P(56.5, 45), P(43.5, 45)], fill=(*SPRUCE, 255))
-    return tile.resize((d_px, d_px), Image.Resampling.LANCZOS)
-
-
 def paste_center(base: Image.Image, tile: Image.Image, cx: int, cy: int, opacity: float = 1.0,
                  rot: float = 0.0, scale: float = 1.0) -> None:
     if opacity <= 0:
@@ -204,26 +181,6 @@ def paste_center(base: Image.Image, tile: Image.Image, cx: int, cy: int, opacity
 def pathfinder_mark(base: Image.Image, cx: int, cy: int, d_px: int, opacity: float = 1.0) -> None:
     paste_center(base, _ring_tile(d_px), cx, cy, opacity)
     paste_center(base, _compass_inner(d_px), cx, cy, opacity)
-
-
-def refactored_mark(base: Image.Image, cx: int, cy: int, d_px: int, opacity: float = 1.0) -> None:
-    paste_center(base, _ring_tile(d_px), cx, cy, opacity)
-    paste_center(base, _keystone_inner(d_px), cx, cy, opacity)
-
-
-def morph_mark(base: Image.Image, cx: int, cy: int, d_px: int, t: float) -> None:
-    """t in 0..1: compass -> keystone. Ring constant; inner restructures."""
-    paste_center(base, _ring_tile(d_px), cx, cy, 1.0)
-    comp_op = 1.0 - clamp01((t - 0.30) / 0.20)
-    comp_rot = -150 * ease_in_out(seg(t, 0.28, 0.55))
-    if comp_op > 0:
-        paste_center(base, _compass_inner(d_px), cx, cy, comp_op, rot=comp_rot)
-    key_p = seg(t, 0.42, 0.62)
-    if key_p > 0:
-        key_op = ease_out(key_p)
-        key_scale = 0.82 + 0.18 * ease_out(key_p)
-        key_rot = -8 * (1 - ease_out(key_p))
-        paste_center(base, _keystone_inner(d_px), cx, cy, key_op, rot=key_rot, scale=key_scale)
 
 
 # ---------- text ----------
@@ -262,13 +219,6 @@ if __name__ == "__main__":
     center_text(f, 560, "Pathfinder", news(96, 480), PAPER)
     grain(f)
     f.save(out / "test_pathfinder.png")
-
-    f = field()
-    refactored_mark(f, WIDTH // 2, 415, 190)
-    center_text(f, 545, "Refactored", news(96, 480), PAPER)
-    eyebrow(f, 680, "Mission follows mastery", SPRUCE, size=24)
-    grain(f)
-    f.save(out / "test_refactored.png")
 
     f = field()
     center_text(f, 300, "Reentry isn't a paperwork problem.", news(78, 440), PAPER)
