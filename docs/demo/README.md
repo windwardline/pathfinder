@@ -5,7 +5,7 @@ them, versioned alongside the code they demonstrate.
 
 ## The film
 
-`refactored-90s/exports/Pathfinder-Marcus-90s-FINAL-CUT.mp4` — the
+`pathfinder-90s/exports/Pathfinder-Marcus-90s-FINAL-CUT.mp4` — the
 90.000-second Demo Day final cut. A hand-drawn ink-and-wash character story: Marcus leaves a
 correctional facility, meets the tangle of reentry requirements, and works
 Pathfinder's route one step at a time — state ID, warehouse job, apartment
@@ -16,7 +16,7 @@ Narration is the ElevenLabs Voice Library voice "Liam" (eleven_v3). No
 captions. All application footage is the real product running the seeded
 SD-008 scenario with fictional demo data; no UI is generated or reconstructed.
 
-## Production kit — `refactored-90s/build/`
+## Production kit — `pathfinder-90s/build/`
 
 | Path | What it is |
 |---|---|
@@ -35,11 +35,11 @@ SD-008 scenario with fictional demo data; no UI is generated or reconstructed.
 Rebuild the final cut with:
 
 ```sh
-python3 refactored-90s/build/render_marcus.py
+python3 pathfinder-90s/build/render_marcus.py
 ```
 
 The renderer is deterministic: same inputs, pixel-identical frames. It writes
-`refactored-90s/exports/Pathfinder-Marcus-90s-FINAL-CUT.mp4` and requires Pillow
+`pathfinder-90s/exports/Pathfinder-Marcus-90s-FINAL-CUT.mp4` and requires Pillow
 and FFmpeg.
 
 ## Presenter backdrops — `backdrops/`
@@ -64,4 +64,4 @@ python3 backdrops/render_backdrops.py
 
 Deterministic in the same way as the film renderer — same inputs, pixel-identical
 output, verified by checksum against the committed images. Requires Pillow, and
-reuses the brand fonts in `refactored-90s/build/fonts/`.
+reuses the brand fonts in `pathfinder-90s/build/fonts/`.

@@ -18,7 +18,7 @@ The demonstration must make one distinction memorable:
 
 The 90-second film and its full production kit live in
 [`docs/demo/`](../demo/README.md). The final cut is
-`docs/demo/refactored-90s/exports/Pathfinder-Marcus-90s-FINAL-CUT.mp4`.
+`docs/demo/pathfinder-90s/exports/Pathfinder-Marcus-90s-FINAL-CUT.mp4`.
 
 ## Evidence Boundary
 
@@ -61,10 +61,10 @@ time over real product footage.
 | 57-76 seconds | Route History and the full Route in the real app; evening stoop | Every change is preserved and explainable. |
 | 76-90 seconds | Finale walk along the dashed route line; logo lockup | Pathfinder — the way home. |
 
-The narration is timed by `docs/demo/refactored-90s/build/audio/beatmap-marcus.json`;
+The narration is timed by `docs/demo/pathfinder-90s/build/audio/beatmap-marcus.json`;
 the per-beat audio and assembled track sit beside it. The renderer composites
 the app footage from real SD-008 captures in
-`docs/demo/refactored-90s/build/captures2/`.
+`docs/demo/pathfinder-90s/build/captures2/`.
 
 ## Live Demo Preflight
 
@@ -88,7 +88,7 @@ Complete this checklist on the presentation machine:
    Focus Action, open the Proposed Fact review, confirm, and open Route
    History.
 9. Keep the final cut available locally as the fallback:
-   `docs/demo/refactored-90s/exports/Pathfinder-Marcus-90s-FINAL-CUT.mp4`.
+   `docs/demo/pathfinder-90s/exports/Pathfinder-Marcus-90s-FINAL-CUT.mp4`.
 
 If the live application is unavailable, state that the production health check
 was completed before the event and play the local 90-second MP4. Do not debug on
@@ -99,7 +99,7 @@ stage.
 The film was produced entirely in-repo with a deterministic pipeline; the kit
 is documented in [`docs/demo/README.md`](../demo/README.md).
 
-1. Picture: `docs/demo/refactored-90s/build/render_marcus.py` draws every
+1. Picture: `docs/demo/pathfinder-90s/build/render_marcus.py` draws every
    frame with Pillow — hand-drawn ink-and-wash linework with seeded jitter and
    8 fps line boil — and pipes 2,700 frames to FFmpeg (H.264 crf 17,
    1920 by 1080, 30 frames per second, exactly 90.000 seconds).
