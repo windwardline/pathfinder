@@ -22,11 +22,18 @@ overrides:
   # Everything below 5.0.8 is vulnerable to GHSA-mh99-v99m-4gvg (DoS via
   # unbounded expansion); no fixed 1.x exists, so force the whole tree to
   # the single patched release. Both prior instances were dev-tool chains.
-  'brace-expansion': 5.0.8
-  'next@16.2.11>postcss': 8.5.18
+  # 2026-08-03: 5.0.9 — the follow-up advisory (unbounded intermediate
+  # arrays bypassing the CVE-2026-14257 mitigation) lands its complete fix.
+  'brace-expansion': 5.0.9
   'next@16.2.11>sharp': 0.35.3
+  # 2026-08-03: any postcss below 8.5.23 reads attacker-controlled
+  # sourceMappingURL .map files when `from` is unset (incomplete fix of
+  # GHSA-6g55-p6wh-862q). Two in-range instances (8.5.18 via next,
+  # 8.5.19 via @tailwindcss/postcss) — force the whole tree, same
+  # posture as brace-expansion above.
+  'postcss@<8.5.23': 8.5.23
 patchedDependencies:
-  brace-expansion@5.0.8: patches/brace-expansion@5.0.8.patch
+  brace-expansion@5.0.9: patches/brace-expansion@5.0.9.patch
 trustPolicy: no-downgrade
 trustPolicyExclude:
   # Security patch for four advisories (two CVSS 9.1); published without
