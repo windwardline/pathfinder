@@ -1,4 +1,4 @@
-import NextAuth from "next-auth"
+import NextAuth, { type NextAuthConfig } from "next-auth"
 import Resend from "next-auth/providers/resend"
 import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db, accounts, sessions, users, verificationTokens } from "@pathfinder/core"
@@ -14,59 +14,60 @@ const baseAdapter = DrizzleAdapter(db, {
   verificationTokensTable: verificationTokens,
 })
 
-const resendProvider = Resend({
+// Exported so tests can resolve it exactly as Auth.js does and pin the URL
+// that actually reaches the email template.
+export const resendProvider = Resend({
   name: "Email",
   apiKey: process.env.RESEND_API_KEY,
   from: process.env.AUTH_RESEND_FROM || MAGIC_LINK_FROM,
   maxAge: 15 * 60,
-  // House email template instead of the stock Auth.js one; the telemetry
-  // wrapper below hands this the scanner-safe /verify URL.
+  // Everything the send needs lives in this one function. Auth.js keeps the
+  // config object passed here on `provider.options` and merges it *over* the
+  // provider's own defaults (@auth/core parseProviders), so a
+  // `sendVerificationRequest` assigned to the provider afterwards is silently
+  // discarded — the URL rewrite and telemetry have to be inside this function
+  // to run at all.
   async sendVerificationRequest({ identifier, url, provider }) {
-    const { subject, html, text } = magicLinkEmail(url)
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${provider.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ from: provider.from, to: identifier, subject, html, text }),
-    })
-    if (!res.ok) {
-      throw new Error(`Resend send failed: ${res.status} ${await res.text()}`)
+    const correlationId = crypto.randomUUID()
+    const startedAt = performance.now()
+    try {
+      // Email scanners only ever see the inert /verify landing page; the real
+      // callback stays behind the user's form submission.
+      const { subject, html, text } = magicLinkEmail(toScannerSafeVerificationUrl(url))
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${provider.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ from: provider.from, to: identifier, subject, html, text }),
+      })
+      if (!res.ok) {
+        throw new Error(`Resend send failed: ${res.status} ${await res.text()}`)
+      }
+      emitOperationalEvent({
+        correlationId,
+        service: "authentication",
+        operation: "magic_link_request",
+        outcome: "success",
+        durationMs: performance.now() - startedAt,
+      })
+    } catch (error) {
+      emitOperationalEvent({
+        correlationId,
+        service: "authentication",
+        operation: "magic_link_request",
+        outcome: "failure",
+        durationMs: performance.now() - startedAt,
+      })
+      throw error
     }
   },
 })
 
-const sendVerificationRequest = resendProvider.sendVerificationRequest
-resendProvider.sendVerificationRequest = async params => {
-  const correlation = crypto.randomUUID()
-  const startedAt = performance.now()
-  try {
-    const result = await sendVerificationRequest({
-      ...params,
-      url: toScannerSafeVerificationUrl(params.url),
-    })
-    emitOperationalEvent({
-      correlationId: correlation,
-      service: "authentication",
-      operation: "magic_link_request",
-      outcome: "success",
-      durationMs: performance.now() - startedAt,
-    })
-    return result
-  } catch (error) {
-    emitOperationalEvent({
-      correlationId: correlation,
-      service: "authentication",
-      operation: "magic_link_request",
-      outcome: "failure",
-      durationMs: performance.now() - startedAt,
-    })
-    throw error
-  }
-}
-
-export const { handlers, signIn, signOut, auth } = NextAuth({
+// Named so tests can assert the routing Auth.js is given, rather than the
+// routing it falls back to.
+export const authConfig = {
   adapter: {
     ...baseAdapter,
     // Auth.js requires this operation to be atomic and single-use. Email
@@ -81,6 +82,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/signin",
     verifyRequest: "/check-email",
+    // Without this, a failed send or a spent link lands on the stock Auth.js
+    // error page; /signin already carries the copy for both.
+    error: "/signin",
   },
   callbacks: {
     session({ session, user }) {
@@ -90,4 +94,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session
     },
   },
-})
+} satisfies NextAuthConfig
+
+export const { handlers, signIn, signOut, auth } = NextAuth(authConfig)
