@@ -30,3 +30,33 @@ describe('magic link email (house standard)', () => {
     expect(email.text).toContain('15 minutes');
   });
 });
+
+// Hardened 2026-08-02: dark-mode mail clients recolor anything left to a
+// default, and the old #667 footer fell to roughly 3.1:1 under inversion.
+describe('magic link email (dark mode)', () => {
+  const email = magicLinkEmail('https://pathfinder.example/verify?callbackUrl=%2F');
+
+  it('declares a light scheme the client is asked not to override', () => {
+    expect(email.html).toContain('color-scheme:light');
+    expect(email.html).toContain('<meta name="color-scheme" content="light">');
+    expect(email.html).toContain('<meta name="supported-color-schemes" content="light">');
+  });
+
+  it('backs the wrapper and the button with bgcolor attributes', () => {
+    expect(email.html).toContain('bgcolor="#ffffff"');
+    expect(email.html).toContain('bgcolor="#17594e"');
+  });
+
+  it('states every text color, at the accent of record', () => {
+    expect(email.html).toContain('color:#111111');
+    expect(email.html).toContain('color:#555555');
+    expect(email.html).toContain('background-color:#17594e');
+    expect(email.html).toContain('color:#ffffff');
+  });
+
+  it('leaves no element carrying a client default', () => {
+    expect(email.html).not.toContain('#667');
+    expect(email.html).not.toMatch(/<p>/);
+    expect(email.html).not.toMatch(/<h2 style="margin:0 0 12px">/);
+  });
+});
