@@ -1,4 +1,4 @@
-import NextAuth from "next-auth"
+import NextAuth, { type NextAuthConfig } from "next-auth"
 import Resend from "next-auth/providers/resend"
 import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db, accounts, sessions, users, verificationTokens } from "@pathfinder/core"
@@ -66,7 +66,9 @@ resendProvider.sendVerificationRequest = async params => {
   }
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+// Named so tests can assert the routing Auth.js is given, rather than the
+// routing it falls back to.
+export const authConfig = {
   adapter: {
     ...baseAdapter,
     // Auth.js requires this operation to be atomic and single-use. Email
@@ -81,6 +83,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/signin",
     verifyRequest: "/check-email",
+    // Without this, a failed send or a spent link lands on the stock Auth.js
+    // error page; /signin already carries the copy for both.
+    error: "/signin",
   },
   callbacks: {
     session({ session, user }) {
@@ -90,4 +95,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session
     },
   },
-})
+} satisfies NextAuthConfig
+
+export const { handlers, signIn, signOut, auth } = NextAuth(authConfig)

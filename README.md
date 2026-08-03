@@ -73,6 +73,7 @@ the repository):
 |---|---|
 | `POSTGRES_URL` (or `DATABASE_URL`) | Postgres connection string |
 | `AUTH_SECRET` | NextAuth session encryption (`openssl rand -base64 32`) |
+| `AUTH_URL` | Canonical origin the sign-in email links to. Origin only — a path segment moves every auth route. Production: `https://pathfinder.windwardline.com` |
 | `RESEND_API_KEY` | Magic-link sign-in email delivery |
 | `AUTH_RESEND_FROM` | Verified sender address for sign-in email |
 | `GROQ_API_KEY` | AI fact extraction (optional — the app degrades gracefully) |

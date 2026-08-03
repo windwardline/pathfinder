@@ -4,7 +4,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "env": ["POSTGRES_URL", "DATABASE_URL", "AUTH_SECRET", "RESEND_API_KEY", "GROQ_API_KEY", "GROQ_MODEL", "AUTH_RESEND_FROM"],
+      "env": ["POSTGRES_URL", "DATABASE_URL", "AUTH_SECRET", "AUTH_URL", "RESEND_API_KEY", "GROQ_API_KEY", "GROQ_MODEL", "AUTH_RESEND_FROM"],
       "outputs": [".next/**", "!.next/cache/**"]
     },
     "lint": {
