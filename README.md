@@ -4,6 +4,10 @@ Pathfinder builds and continuously updates a user's Reentry Route. It shows what
 
 An independent product, built end-to-end and run in production.
 
+Live: **[pathfinder.windwardline.com](https://pathfinder.windwardline.com)**
+
+![Pathfinder's front door: "Your reentry route: what comes next, why it comes next, and what it unlocks" beside passwordless sign-in](docs/readme-hero.png)
+
 ## Repository Status
 
 - Product baseline: Version 2 Design Freeze
