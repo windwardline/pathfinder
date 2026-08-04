@@ -10,9 +10,9 @@ pnpm + turbo monorepo: `apps/web` (Next.js 16 + Auth.js) and `packages/core` (`@
 
 Root: `pnpm dev` · `build` · `lint` · `typecheck` · `test` (scripts tests, then turbo fan-out). Scoped: `pnpm --filter web <script>` and `pnpm --filter @pathfinder/core <script>`. E2E: `pnpm --filter web exec playwright install --with-deps chromium webkit`, then `pnpm --filter web test:e2e`. Docs gate: `python3 scripts/validate_documentation.py`.
 
-## Gates — six workflows
+## Gates — seven workflows
 
-`ci.yml`: docs validation → db:migrate (Postgres service) → lint → typecheck → test → e2e → build. `security.yml` (PRs + weekly): Semgrep, CodeQL, gitleaks, OSV, license policy. `documentation.yml`: the docs validator on every PR — a required check with no path filter, deliberately. `production-health.yml`: prod `/api/health` every 15 minutes. `recovery-drill.yml`: weekly backup/restore/deletion-ledger drill. `production-alert.yml`: opens an issue when health or drill fails.
+`ci.yml`: docs validation → db:migrate (Postgres service) → lint → typecheck → test → e2e → build. `security.yml` (PRs + weekly): Semgrep, CodeQL, gitleaks, OSV, license policy. `documentation.yml`: the docs validator on every PR — a required check with no path filter, deliberately. `production-health.yml`: prod `/api/health` every 15 minutes. `recovery-drill.yml`: weekly backup/restore/deletion-ledger drill. `production-alert.yml`: opens an issue when health or drill fails. `claude-review.yml`: an advisory Claude review on every PR (activates once the `ANTHROPIC_API_KEY` repo secret exists).
 
 ## Laws
 
