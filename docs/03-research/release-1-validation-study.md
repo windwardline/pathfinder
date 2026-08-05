@@ -7,8 +7,10 @@
 ## Purpose
 
 This is the de-identified evidence record for H1 through H4 in
-[Validation Strategy](validation.md). Automated tests cannot complete this
-study. Only observed participant sessions may be recorded as results.
+[Validation Strategy](validation.md). The field protocol that would produce this
+record is defined in [User Validation Plan](user-validation-plan.md). Automated
+tests cannot complete this study. Only observed participant sessions may be
+recorded as results.
 
 Participant recruitment and facilitation are not available before the current
 Demo Day milestone. The study is therefore outside the pre-demo critical path.
