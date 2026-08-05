@@ -16,7 +16,7 @@ EXPECTED_COUNTS = {
     "docs/00-governance": 7,
     "docs/01-product": 4,
     "docs/02-architecture": 6,
-    "docs/03-research": 5,
+    "docs/03-research": 6,
     "docs/04-risk": 3,
     "docs/05-decisions": 7,
     "docs/06-development": 6,

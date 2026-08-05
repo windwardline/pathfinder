@@ -61,6 +61,7 @@ When documents conflict, the higher-authority source governs.
 | literature-review.md | Synthesizes evidence supporting the problem space | Product Research |
 | competitor-analysis.md | Tests differentiation against adjacent products | Product Research |
 | validation.md | Defines product-hypothesis validation | Product Research |
+| user-validation-plan.md | Defines the participant study protocol, phases, and stop conditions | Product Research |
 | release-1-validation-study.md | Records the de-identified participant protocol and results | Product Research |
 
 ## 04 — Risk
