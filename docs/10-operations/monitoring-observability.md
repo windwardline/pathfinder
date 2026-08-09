@@ -127,11 +127,15 @@ Following deployment verify:
 `.github/workflows/production-health.yml` calls the public health endpoint four
 times per hour and can also be run manually. The verifier fails unless the
 application, database, configuration, and Route Engine checks are all ready.
+A first miss is retried once after a short delay before the run fails —
+serverless-Postgres cold-start connect latency produced three false alarms in
+44 hours (2026-08-06/07), and each failed run opens an alert issue. The first
+miss is logged at warning severity so flakes stay visible without alerting.
 
 `scripts/verify_production_health.mjs` emits one structured, privacy-safe JSON
-event containing only operational status, latency, versions, and the endpoint's
-correlation identifier. It does not send user identifiers, Fact values, Route
-content, or document content.
+event per attempt containing only operational status, latency, versions, and
+the endpoint's correlation identifier. It does not send user identifiers, Fact
+values, Route content, or document content.
 
 The workflow failure is the automation boundary. Notification services such as
 Zapier may subscribe to failed workflow runs, but must not receive Pathfinder
