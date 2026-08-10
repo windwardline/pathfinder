@@ -1,3 +1,9 @@
+# Semgrep's pnpm-trust-policy rule wants `trustPolicy: no-downgrade`. It is
+# deliberately absent — see the retirement note at the foot of this file for
+# the measurement behind that call (49 of 564 locked packages fail it, react
+# and esbuild among them). Suppressed here rather than repo-wide so the rule
+# still fires if this file is ever restructured.
+# nosemgrep: package_managers.pnpm.pnpm-trust-policy.pnpm-trust-policy
 packages:
   - 'apps/*'
   - 'packages/*'
@@ -45,16 +51,31 @@ overrides:
   'js-yaml@<4.3.1': 4.3.1
 patchedDependencies:
   brace-expansion@5.0.9: patches/brace-expansion@5.0.9.patch
-trustPolicy: no-downgrade
-trustPolicyExclude:
-  # Security patch for four advisories (two CVSS 9.1); published without
-  # provenance by the same npm account as the beta.31 already in production
-  # (Better Auth team, post-Auth.js transition). Exact version only.
-  - 'next-auth@5.0.0-beta.32'
-  # Both already in this lockfile and every production build (published
-  # 2026-05-25 and 2026-04-17); re-locked unchanged by the brace-expansion
-  # override below. Upstream trust tier dropped (Babel/Meta release-infra
-  # changes), no advisories or ecosystem reports as of 2026-07-25. Approved
-  # by Michael 2026-07-25. Exact versions only.
-  - '@babel/core@7.29.7'
-  - 'eslint-plugin-react-hooks@7.1.1'
+# trustPolicy: no-downgrade — retired 2026-08-10 (approved by Michael).
+#
+# It blocked every dependency update in this repo, security updates included,
+# while CI stayed green: --frozen-lockfile replays the locked tree without
+# re-evaluating trust, so the lockfile was frozen-valid but update-poisoned.
+# Any version bump re-resolved subtrees and the policy then rejected packages
+# already in the lockfile. Dependabot's npm lane went red on 2026-08-10 after
+# four consecutive green weeks.
+#
+# The operative rule is not the one pnpm's error text states. It is: the
+# package has at least one attested version anywhere in its packument and the
+# locked version has none. Scanning all 564 locked packages found 49 failures
+# — react and react-dom 19.2.4, scheduler, esbuild plus all 26 @esbuild/*
+# platform binaries, semver 6.3.1, ms, undici-types. Current mainstream
+# releases, not stragglers: React 19.2.4 ships without provenance while 98
+# other React versions carry it.
+#
+# 49 exclusions out of 564 packages is not a policy, it is an exception list
+# that must be extended every time a transitive dependency moves — and every
+# miss silently re-blocks security patches. npm's provenance coverage does not
+# yet support no-downgrade. Note pnpm does not validate this setting: an
+# unrecognized value is ignored rather than rejected, so there is no soft mode
+# to fall back on.
+#
+# Still enforced above, and doing the real work: minimumReleaseAge (7-day
+# quarantine), blockExoticSubdeps, pinned overrides, and patchedDependencies.
+# Revisit if npm provenance reaches the point where the exception list would
+# be short enough to read.
