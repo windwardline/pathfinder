@@ -8,6 +8,12 @@ updates:
       time: "09:00"
       timezone: America/New_York
     open-pull-requests-limit: 5
+    # Seven days here is load-bearing twice over: it is the soak that makes
+    # dependabot-auto-merge.yml safe, and it is what keeps this lane compatible
+    # with pnpm's own minimumReleaseAge (10080 minutes in pnpm-workspace.yaml).
+    # Dependabot resolves the lockfile with pnpm, so a version younger than
+    # pnpm's gate would be rejected during resolution rather than merged.
+    # fleet-conformance.sh reads this number, not the file's presence.
     cooldown:
       default-days: 7
     groups:
