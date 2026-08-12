@@ -11,8 +11,8 @@
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
-    "turbo": "^2.10.4",
-    "typescript": "^5.9.3"
+    "turbo": "^2.10.8",
+    "typescript": "^6.0.3"
   },
   "packageManager": "pnpm@10.34.5"
 }
