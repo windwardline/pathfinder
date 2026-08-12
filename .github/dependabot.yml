@@ -16,6 +16,20 @@ updates:
     # fleet-conformance.sh reads this number, not the file's presence.
     cooldown:
       default-days: 7
+    # Majors that cannot land yet, held in config rather than by PR comment.
+    # `@dependabot ignore <dep> major version` ignores only the ONE major it was
+    # commented on: ignoring typescript 7 brought back typescript 6 on the next
+    # rebuild, and ignoring @types/node 26 brought back 25. Config-level
+    # update-types blocks the whole class, and — unlike comment state, which is
+    # invisible in the repo — it is reviewable here. Each entry's blocker is
+    # recorded in the deferred-majors issue; lift by deleting the entry.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       production-dependencies:
         dependency-type: production
