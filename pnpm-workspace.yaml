@@ -20,11 +20,6 @@ minimumReleaseAgeExclude:
   # Fix for GHSA-mh99-v99m-4gvg shipped 2026-07-23, one day before the
   # advisory published — it cannot age past quarantine before we need it.
   - brace-expansion
-  # GHSA-2v37-7h3g-55p8 (CVSS 8.2) is fixed in nanoid 3.3.17, published
-  # 2026-08-03 — five days old, still inside the seven-day quarantine. Pinned
-  # to 3.3.17 rather than the newer 3.3.18 (one day old) so the exclusion
-  # gives up as little soak time as the advisory requires.
-  - nanoid
 
 overrides:
   '@auth/core>cookie': 0.7.2
@@ -43,9 +38,15 @@ overrides:
   # 8.5.19 via @tailwindcss/postcss) — force the whole tree, same
   # posture as brace-expansion above.
   'postcss@<8.5.23': 8.5.23
-  # GHSA-2v37-7h3g-55p8: predictable IDs from a biased random source. One
-  # instance in this lockfile, transitive. See the quarantine note above.
-  'nanoid@<3.3.17': 3.3.17
+  # GHSA-2v37-7h3g-55p8: a custom generator loops indefinitely when asked
+  # for size zero. One instance, transitive via postcss. 2026-08-13: the
+  # advisory widened to `< 3.3.18`, which put the previous 3.3.17 pin
+  # inside the vulnerable range. A pin records a judgment about a range,
+  # so it has to be re-read every time the range moves — nothing here
+  # noticed on its own; the daily osv-scan did, four days later. 3.3.18
+  # published 2026-08-07 and clears the seven-day quarantine unaided, so
+  # the exclusion this entry used to need is gone.
+  'nanoid@<3.3.18': 3.3.18
   # GHSA-5p4m-2wfm-xmqj: prototype pollution in the dev-only YAML loader.
   # 4.3.1 published 2026-07-31, past quarantine on its own.
   'js-yaml@<4.3.1': 4.3.1
