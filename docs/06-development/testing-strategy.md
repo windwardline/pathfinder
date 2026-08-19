@@ -235,6 +235,13 @@ Required security coverage:
 
 Any user-isolation failure blocks release.
 
+Sign-in is verified in a browser, from the emailed link through to a session
+cookie the browser actually holds: `apps/web/tests/e2e/magic-link-signin.spec.ts`.
+Seeding a session cookie is a fixture for tests about something else, never
+coverage of authentication. The same spec asserts that an unattended GET of
+`/verify` leaves the token unspent and that a second use of a spent link is
+refused.
+
 ## Privacy Testing
 
 Privacy verification must confirm:
