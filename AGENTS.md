@@ -1,6 +1,6 @@
 # Pathfinder — operating contract
 
-Operating contract for AI work in this repo; the global `~/AGENTS.md` still applies. Work here follows the CONVERGE cycle and delivery discipline in `FLEET.md` (windwardline/windwardline) — find → refute → verify yourself → fix → re-rank → test → update → report, and the delivery rules under it. Pathfinder builds and continuously updates a user's Reentry Route — what comes next, why, and what it unlocks. Live at pathfinder.windwardline.com. Private and proprietary.
+Operating contract for AI work in this repo; the global `~/AGENTS.md` still applies. Work here follows the CONVERGE cycle and delivery discipline in `FLEET.md` (windwardline/windwardline) — find → refute → verify yourself → fix → re-rank → test → update → report; enumerate the gates rather than counting them, stage explicit paths, validate before mutating, preserve standing claims, derive populations rather than curating them, and never let a harness failure read as the subject refusing. `FLEET.md` governs where it and this summary differ. Pathfinder builds and continuously updates a user's Reentry Route — what comes next, why, and what it unlocks. Live at pathfinder.windwardline.com. Private and proprietary.
 
 ## Workspace
 
