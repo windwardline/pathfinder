@@ -12,9 +12,9 @@ Pathfinder's route one step at a time — state ID, warehouse job, apartment
 keys — over real product footage.
 
 H.264, 1920×1080, 30 fps, AAC 256 kbps. −13.8 LUFS integrated, −0.9 dBTP.
-Narration is the ElevenLabs Voice Library voice "Liam" (eleven_v3). No
-captions. All application footage is the real product running the seeded
-SD-008 scenario with fictional demo data; no UI is generated or reconstructed.
+Narration uses a licensed stock synthetic voice. No captions. All application
+footage is the real product running the seeded SD-008 scenario with fictional
+demo data; no UI is generated or reconstructed.
 
 ## Production kit — `pathfinder-90s/build/`
 
@@ -26,8 +26,8 @@ SD-008 scenario with fictional demo data; no UI is generated or reconstructed.
 | `audio/soundtrack-marcus5.wav` | Final 90.0 s mix: narration, composed score (ducked), foley |
 | `audio/beatmap-marcus.json` | Narration beat map the renderer is timed against |
 | `audio/liam-*.wav`, `audio/narration-liam.wav` | Cleaned per-beat narration and the assembled track |
-| `audio/vo-liam/` | Raw ElevenLabs narration takes |
-| `audio/music__20260722_163059.mp3` | Composed score (ElevenLabs music) |
+| `audio/vo-liam/` | Raw narration takes |
+| `audio/music__20260722_163059.mp3` | Licensed original score |
 | `audio/foley/` | Five sound effects: dawn birds, bus hum, click, keys, crickets |
 | `captures2/` | 679 real product frames (SD-008, fictional data) the UI scenes composite from, plus the source recording |
 | `fonts/` | Newsreader statics and Geist Mono used by the renderers |
