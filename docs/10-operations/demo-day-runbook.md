@@ -109,12 +109,12 @@ is documented in [`docs/demo/README.md`](../demo/README.md).
    or reconstructed, and every protected term — Fact, Confirmed Fact,
    Proposed Fact, Route, Focus Action, Reroute — appears only as the real
    product renders it.
-3. Narration: the ElevenLabs Voice Library voice `Liam` with eleven_v3
-   (stability 0.6, style 0.05). The presenter's voice is not recorded,
-   uploaded, or cloned. No captions.
-4. Music and foley: an original composed score (ElevenLabs music) ducked under
-   narration by sidechain compression, plus five subtle diegetic effects —
-   dawn birds, bus hum, one click, keys, crickets.
+3. Narration: a licensed stock synthetic voice used only in the committed demo
+   assets. The presenter's voice is not recorded, uploaded, or cloned. No
+   captions.
+4. Music and foley: a licensed original score ducked under narration by
+   sidechain compression, plus five subtle diegetic effects — dawn birds, bus
+   hum, one click, keys, crickets.
 5. Final-cut verification: exact 90.000-second duration, complete clean decode,
    −13.8 LUFS integrated, −0.9 dBTP true peak, spot frames across all scenes.
 
