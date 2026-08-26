@@ -34,4 +34,6 @@ The following are security-critical Pathfinder boundaries:
 
 This policy supports, and does not replace, the canonical [Privacy and Security Specification](docs/04-risk/privacy-security-specification.md), [Safety Specification](docs/04-risk/safety.md), [Data Lifecycle](docs/08-data/data-lifecycle.md), and [Incident Response](docs/10-operations/incident-response.md).
 
+The production security scope is `https://pathfinder.windwardline.com`.
+
 Security changes must follow repository governance, include appropriate tests, and update canonical documentation when requirements or behavior change.
