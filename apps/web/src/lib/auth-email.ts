@@ -1,4 +1,4 @@
-// House-standard magic-link email, shared with TimeShift and LevelFlow:
+// House-standard magic-link email, shared with LevelFlow:
 // "{App} <login@windwardline.com>" sender, "Your {App} sign-in link" subject,
 // headline / expiry sentence / brand button / ignore-line body. Only the app
 // name, accent color, and true link expiry vary per product.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MAGIC_LINK_FROM, magicLinkEmail } from '../src/lib/auth-email';
 
-// House standard shared with TimeShift and LevelFlow: sender is
+// House standard shared with LevelFlow: sender is
 // "{App} <login@windwardline.com>", subject is "Your {App} sign-in link",
 // body is headline / expiry sentence / brand button / ignore-line footer.
 describe('magic link email (house standard)', () => {
