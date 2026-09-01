@@ -29,3 +29,22 @@ Dependabot groups npm production dependencies as `production-dependencies`, npm 
 - Tests live in `apps/web/tests` and `packages/core/tests`. The root `/tests` subdirs are `.gitkeep` placeholders the docs validator asserts — leave them.
 - Vercel runs `db:migrate` on production deploys only (`apps/web/vercel.json` gates on `VERCEL_ENV`).
 - `docs/` (twelve numbered dirs) is canonical and CI-enforced: a change touching documented behavior updates docs in the same PR or `documentation.yml` fails.
+
+## Declared gates
+
+The machine-readable gate set. `scripts/fleet-conformance.sh` requires this block
+and the workspace done-gate hook runs every `gate:` line before a session may
+finish, so what runs is what is written here rather than what a hook guessed from
+`package.json`. Each key states its own boundary: `gate:` runs at session end and
+must be local and quick; `release:` runs before a pull request and may be slow;
+`cadence:` is scheduled or needs the live machine and is run by neither.
+
+```fleet-gates
+gate: python3 scripts/validate_documentation.py
+gate: pnpm lint
+gate: pnpm typecheck
+gate: pnpm test
+gate: pnpm build
+release: pnpm --filter web test:e2e
+cadence: pnpm db:migrate
+```
