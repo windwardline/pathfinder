@@ -46,5 +46,4 @@ gate: pnpm typecheck
 gate: pnpm test
 gate: pnpm build
 release: pnpm --filter web test:e2e
-cadence: pnpm db:migrate
 ```

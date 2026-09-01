@@ -55,20 +55,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate documentation
-        run: python3 scripts/validate_documentation.py
-
       - name: Apply test database migrations
         run: pnpm --filter @pathfinder/core db:migrate
+
+      # Runs exactly the gates AGENTS.md declares in its fleet-gates block, so the
+      # contract's gate list is executable rather than prose. Byte-identical in
+      # every fleet repository with CI; the conformance checker compares it.
+      - name: Run declared gates
+        run: |
+          gates=$(awk '/^```fleet-gates$/{o=1;next} o&&/^```$/{o=0;next} o&&/^gate: /{sub(/^gate: /,"");print}' AGENTS.md)
+          [ -n "$gates" ] || { echo "AGENTS.md declares no gate: entry in its fleet-gates block" >&2; exit 1; }
+          n=0
+          while IFS= read -r gate; do
+            [ -n "$gate" ] || continue
+            echo "::group::$gate"
+            sh -c "$gate"
+            echo "::endgroup::"
+            n=$((n + 1))
+          done <<< "$gates"
+          echo "$n declared gate(s) executed."
         
-      - name: Run Lint
-        run: pnpm run lint
-
-      - name: Run Typecheck
-        run: pnpm run typecheck
-
-      - name: Run Tests
-        run: pnpm run test
 
       - name: Install browser acceptance runtime
         run: pnpm --filter web exec playwright install --with-deps chromium webkit
@@ -76,5 +82,3 @@ jobs:
       - name: Run browser acceptance tests
         run: pnpm --filter web test:e2e
 
-      - name: Build
-        run: pnpm run build
