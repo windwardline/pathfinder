@@ -63,11 +63,14 @@ def api(path: str, token: str, method: str = "GET", params: dict | None = None) 
     req.add_header("Authorization", f"Bearer {token}")
     req.add_header("Accept", "application/json")
     try:
-        # The URL is asserted above to sit under the constant Neon API base, so
-        # the dynamic portion cannot change host, scheme, or escape the prefix.
-        # Semgrep matches inline suppressions on the same or immediately
-        # preceding line, so this must stay adjacent to the call.
-        # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected
+        # The rule this suppresses warns that urllib honours `file://`, so a
+        # dynamic URL could read local files. The assertion above makes that
+        # impossible: the URL must already start with the constant https Neon
+        # base, so no scheme or host substitution can survive it. Suppressed
+        # bare because the registry reports this rule id doubled
+        # (`...dynamic-urllib-use-detected.dynamic-urllib-use-detected`) and a
+        # targeted id that does not match binds to nothing and reads as fixed.
+        # nosemgrep
         with urllib.request.urlopen(req, timeout=60) as resp:
             body = resp.read().decode()
             return json.loads(body) if body.strip() else {}
