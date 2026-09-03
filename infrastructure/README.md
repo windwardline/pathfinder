@@ -45,6 +45,25 @@ younger than 24 hours. If it cannot determine pull request state it holds
 everything rather than guessing. `scripts/test_neon_branches.py` asserts each of
 those refusals.
 
+## Deployment cost
+
+Vercel bills Build CPU Minutes per deployment, and the charge is fixed per-deploy
+overhead — container provision, install, artifact upload — rather than build
+duration. This project's build step runs in 21-31s, yet Aug 3 - Sep 2 billed
+roughly 8 CPU-minutes per deploy. Optimising the build step would save almost
+nothing; not deploying a commit that changes nothing deployable saves the whole
+deploy.
+
+`apps/web/vercel.json` therefore carries an `ignoreCommand` running
+`scripts/vercel-ignore-build.sh`. It skips only when every changed path is
+`docs/`, `.github/`, `infrastructure/`, `artifacts/`, `tools/`, or `*.md`, and
+builds on anything else — including an unreadable diff, a missing parent commit,
+and an empty file list. A wrong skip ships stale code invisibly; a wrong build
+costs a fraction of a cent.
+
+This change is itself the acceptance test: it touches only this file, so the
+deployment it triggers should be skipped rather than built.
+
 Required configuration: repository secret `NEON_API_KEY` and repository
 variable `NEON_PROJECT_ID`. The workflow distinguishes three states: no
 `NEON_PROJECT_ID` means the repo is not a Neon project and it skips green;
