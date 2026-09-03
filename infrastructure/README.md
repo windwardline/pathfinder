@@ -46,5 +46,9 @@ everything rather than guessing. `scripts/test_neon_branches.py` asserts each of
 those refusals.
 
 Required configuration: repository secret `NEON_API_KEY` and repository
-variable `NEON_PROJECT_ID`. Without both, the workflow exits 78 rather than
-reporting success from a run that could not authenticate.
+variable `NEON_PROJECT_ID`. The workflow distinguishes three states: no
+`NEON_PROJECT_ID` means the repo is not a Neon project and it skips green;
+`NEON_PROJECT_ID` without `NEON_API_KEY` fails with exit 78, because a
+half-configured reaper deletes nothing while appearing healthy; both present
+reaps. The file is byte-identical to `templates/neon-branch-cleanup.yml` in
+windwardline, and `scripts/fleet-conformance.sh` compares the blobs.
