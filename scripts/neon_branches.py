@@ -63,9 +63,11 @@ def api(path: str, token: str, method: str = "GET", params: dict | None = None) 
     req.add_header("Authorization", f"Bearer {token}")
     req.add_header("Accept", "application/json")
     try:
-        # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected
         # The URL is asserted above to sit under the constant Neon API base, so
         # the dynamic portion cannot change host, scheme, or escape the prefix.
+        # Semgrep matches inline suppressions on the same or immediately
+        # preceding line, so this must stay adjacent to the call.
+        # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected
         with urllib.request.urlopen(req, timeout=60) as resp:
             body = resp.read().decode()
             return json.loads(body) if body.strip() else {}
