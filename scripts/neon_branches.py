@@ -52,10 +52,20 @@ def api(path: str, token: str, method: str = "GET", params: dict | None = None) 
     url = f"{API}{path}"
     if params:
         url = f"{url}?{urllib.parse.urlencode(params)}"
+    # Pin every request to the Neon control plane. `path` is assembled from
+    # module constants and provider-issued ids, never from user input, and this
+    # makes that a runtime invariant rather than a property you have to confirm
+    # by reading all the call sites: a traversal, an absolute URL, or a scheme
+    # swap in an id cannot redirect the request or leak the bearer token.
+    if not url.startswith(API + "/"):
+        raise RuntimeError(f"refusing to call a non-Neon URL: {url[:60]}")
     req = urllib.request.Request(url, method=method)
     req.add_header("Authorization", f"Bearer {token}")
     req.add_header("Accept", "application/json")
     try:
+        # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected
+        # The URL is asserted above to sit under the constant Neon API base, so
+        # the dynamic portion cannot change host, scheme, or escape the prefix.
         with urllib.request.urlopen(req, timeout=60) as resp:
             body = resp.read().decode()
             return json.loads(body) if body.strip() else {}
