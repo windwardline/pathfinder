@@ -66,13 +66,32 @@ def api(path: str, token: str, method: str = "GET", params: dict | None = None) 
         raise RuntimeError(f"{method} {path} -> {e.reason}") from None
 
 
+def visible_projects(token: str) -> list[dict]:
+    """Every project this key can see.
+
+    A Vercel-managed key is org-scoped, and a bare /projects call fails with
+    `org_id is required` rather than returning an empty list. Falling back to
+    per-organization listing keeps the tool usable with either key shape.
+    """
+    try:
+        return api("/projects", token).get("projects", [])
+    except RuntimeError as e:
+        if "org_id" not in str(e):
+            raise
+    orgs = api("/users/me/organizations", token).get("organizations", [])
+    found: list[dict] = []
+    for org in orgs:
+        found.extend(api("/projects", token, params={"org_id": org["id"]}).get("projects", []))
+    return found
+
+
 def resolve_project(token: str, explicit: str | None) -> str:
     if explicit:
         return explicit
     env = os.environ.get("NEON_PROJECT_ID")
     if env:
         return env
-    projects = api("/projects", token).get("projects", [])
+    projects = visible_projects(token)
     if len(projects) == 1:
         return projects[0]["id"]
     names = ", ".join(f'{p["id"]} ({p["name"]})' for p in projects) or "none"
