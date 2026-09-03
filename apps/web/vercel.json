@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then pnpm --filter @pathfinder/core db:migrate; fi && pnpm build",
+  "ignoreCommand": "bash ../../scripts/vercel-ignore-build.sh",
   "git": {
     "deploymentEnabled": true
   },
