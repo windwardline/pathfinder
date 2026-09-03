@@ -22,3 +22,29 @@ Vercel Preview is the Release 1 staging boundary. It validates the exact pull
 request commit, but it is not an immutable artifact promotion system: Vercel
 rebuilds each deployment. Canonical documentation must describe that limitation
 instead of claiming byte-for-byte artifact promotion.
+
+## Preview database lifecycle
+
+Neon's Vercel integration creates a `preview/<git-branch>` database for each
+preview deployment. It deletes that database when the Vercel *deployment* is
+removed, which under Vercel's default retention is six months later. Closing a
+pull request and deleting the git branch does not remove the database.
+
+That coupling is the whole of the August 2026 bill: 39,484 surplus branch-hours,
+$79.60 of an $81.78 invoice, against $2.18 of actual compute and storage. One
+merged pull request added roughly $1.50 per month and nothing gave it back.
+
+`.github/workflows/neon-branch-cleanup.yml` puts the database on the pull
+request's clock. It reaps the branch when the pull request closes and sweeps
+weekly for anything that reap missed. `scripts/neon_branches.py` is the same
+logic as a local tool; it dry-runs by default and needs `--execute` to delete.
+
+The reaper never deletes the default branch, a protected branch, a branch
+outside `preview/*`, a branch whose pull request is still open, or a branch
+younger than 24 hours. If it cannot determine pull request state it holds
+everything rather than guessing. `scripts/test_neon_branches.py` asserts each of
+those refusals.
+
+Required configuration: repository secret `NEON_API_KEY` and repository
+variable `NEON_PROJECT_ID`. Without both, the workflow exits 78 rather than
+reporting success from a run that could not authenticate.
