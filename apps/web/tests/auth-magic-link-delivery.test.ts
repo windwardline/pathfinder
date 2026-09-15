@@ -9,6 +9,12 @@ vi.mock('next-auth', () => ({
   default: () => ({ handlers: {}, signIn: () => {}, signOut: () => {}, auth: () => {} }),
 }));
 
+// The provider captures process.env.RESEND_API_KEY at construction, and
+// suppressionStatus returns `unknown` without a key — a lookup that never
+// happened is not evidence. Set it before the import or the suppression
+// branches below are unreachable and would pass vacuously.
+process.env.RESEND_API_KEY ??= 'test-resend-key';
+
 const { resendProvider } = await import('../src/auth');
 
 // What ships in the email is the invariant, and it is only observable after
@@ -31,6 +37,11 @@ async function requestSignIn(response: () => Response) {
   const sent: SentEmail[] = [];
 
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    // The send path now asks about suppression first. 404 is "not suppressed",
+    // which is the state every case here means to exercise.
+    if (String(input).startsWith('https://api.resend.com/suppressions/')) {
+      return new Response('{}', { status: 404 });
+    }
     expect(String(input)).toBe('https://api.resend.com/emails');
     sent.push(JSON.parse(String(init?.body)) as SentEmail);
     return response();
@@ -77,9 +88,85 @@ function telemetry(spy: { mock: { calls: unknown[][] } }) {
     .filter(event => event?.operation === 'magic_link_request');
 }
 
+async function requestSignInSuppressed(suppressionStatus: number) {
+  const sent: SentEmail[] = [];
+
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    if (String(input).startsWith('https://api.resend.com/suppressions/')) {
+      // Resolved on a later macrotask on purpose. @auth/core's send-token
+      // builds the sendVerificationRequest promise, then awaits a hash before
+      // Promise.all attaches a handler to it; a rejection that lands inside
+      // that window is reported as an unhandled rejection and fails the run.
+      // An instantly-resolving mock puts the rejection there, which a real
+      // network call never does. This models the real timing rather than
+      // suppressing the symptom.
+      await new Promise(resolve => setTimeout(resolve, 0));
+      return new Response('{}', { status: suppressionStatus });
+    }
+    sent.push(JSON.parse(String(init?.body)) as SentEmail);
+    return accepted();
+  });
+
+  const result = await Auth(
+    new Request(`${ORIGIN}/api/auth/signin/resend`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ email: 'user@example.com', callbackUrl: `${ORIGIN}/` }),
+    }),
+    {
+      basePath: '/api/auth',
+      secret: 'test-secret-value-of-sufficient-length',
+      trustHost: true,
+      skipCSRFCheck,
+      adapter,
+      providers: [resendProvider],
+    },
+  );
+
+  // Auth.js catches what sendVerificationRequest throws, but it settles that
+  // rejection a tick after Auth() resolves. Without this the run ends with a
+  // reported unhandled rejection, which is noise that would mask a real one.
+  await new Promise(resolve => setTimeout(resolve, 0));
+
+  return { result, sent };
+}
+
 describe('magic link delivery', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  // The defect this guards: Resend ACCEPTS a send to a suppressed address and
+  // drops it, so every status-code branch downstream reads "sent" and the
+  // reader is pointed at an inbox nothing will ever reach.
+  it('does not send at all when the recipient is suppressed', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { sent } = await requestSignInSuppressed(200);
+
+    expect(sent).toHaveLength(0);
+    const rejected = [...telemetry(warn), ...telemetry(error)].filter(
+      event => event?.outcome === 'rejected',
+    );
+    expect(rejected.length).toBeGreaterThan(0);
+    // The contract excludes recipient addresses; a suppression event must not
+    // be the one place one leaks.
+    for (const event of rejected) {
+      expect(JSON.stringify(event)).not.toContain('user@example.com');
+    }
+  });
+
+  it('still sends when the suppression lookup itself fails, and says so', async () => {
+    // Fail-open: a Resend hiccup must not become a total sign-in outage. It
+    // must not be silent either, or the guard's own failure is the new
+    // invisible one.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { sent } = await requestSignInSuppressed(500);
+
+    expect(sent).toHaveLength(1);
+    expect(telemetry(warn).some(event => event?.outcome === 'rejected')).toBe(true);
   });
 
   it('emails the inert /verify landing page, never the token-consuming callback', async () => {

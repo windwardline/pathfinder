@@ -6,6 +6,7 @@ import { toScannerSafeVerificationUrl } from "@/lib/magic-link"
 import { MAGIC_LINK_FROM, magicLinkEmail } from "@/lib/auth-email"
 import { consumeVerificationToken } from "@/lib/verification-token"
 import { emitOperationalEvent } from "@/lib/telemetry"
+import { suppressionStatus } from "@/lib/suppression"
 
 const baseAdapter = DrizzleAdapter(db, {
   usersTable: users,
@@ -31,6 +32,40 @@ export const resendProvider = Resend({
     const correlationId = crypto.randomUUID()
     const startedAt = performance.now()
     try {
+      // A suppressed recipient is accepted by Resend and delivered to nobody,
+      // so this has to be asked BEFORE the send rather than read off its
+      // response. The sign-in form asks the same question to produce better
+      // copy; this one is the authoritative guard, because it sits on the only
+      // code path that can actually send, and any future caller of
+      // signIn('resend') inherits it without knowing it exists.
+      const suppression = await suppressionStatus(provider.apiKey, identifier)
+      if (suppression === 'suppressed') {
+        emitOperationalEvent({
+          correlationId,
+          service: "authentication",
+          operation: "magic_link_request",
+          outcome: "rejected",
+          durationMs: performance.now() - startedAt,
+        })
+        // Never the address: the telemetry contract excludes it on purpose.
+        throw new Error(
+          "Resend suppression: recipient is blocked from delivery. " +
+            "Sending would be accepted and silently dropped.",
+        )
+      }
+      if (suppression === 'unknown') {
+        // The check failed open so sign-in still works. It must not fail
+        // quietly as well, or the guard's own outage is the new invisible one.
+        emitOperationalEvent({
+          correlationId,
+          service: "authentication",
+          operation: "magic_link_request",
+          outcome: "rejected",
+          severity: "warning",
+          durationMs: performance.now() - startedAt,
+        })
+      }
+
       // Email scanners only ever see the inert /verify landing page; the real
       // callback stays behind the user's form submission.
       const { subject, html, text } = magicLinkEmail(toScannerSafeVerificationUrl(url))
