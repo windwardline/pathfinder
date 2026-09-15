@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { suppressionStatus } from '../src/lib/suppression';
+import {
+  UNDELIVERABLE_REDIRECT,
+  signinBlockRedirect,
+  suppressionStatus,
+} from '../src/lib/suppression';
 
 /**
  * A suppressed recipient is the one magic-link failure that reports success.
@@ -65,5 +69,45 @@ describe('suppressionStatus', () => {
     }) as unknown as typeof fetch;
     await suppressionStatus('re_secret', 'a@example.com', capture);
     expect(auth).toBe('Bearer re_secret');
+  });
+});
+
+/**
+ * The sign-in gate. Enforcement moved here because @auth/core reports a
+ * rejection raised inside sendVerificationRequest as unhandled — Node ends the
+ * process for that, and a suppression lookup is fast enough to land in the
+ * window routinely. That made the one line enforcing the whole feature an
+ * inline `if` inside a server action, reachable by no test. It is a function
+ * now, and these are its cases.
+ */
+describe('signinBlockRedirect', () => {
+  const at = (status: number) => async () => new Response('{}', { status });
+
+  it('blocks a suppressed address with the Undeliverable redirect', async () => {
+    expect(await signinBlockRedirect('re_k', 'a@example.com', at(200))).toBe(
+      UNDELIVERABLE_REDIRECT,
+    );
+  });
+
+  it('lets a clear address through', async () => {
+    expect(await signinBlockRedirect('re_k', 'a@example.com', at(404))).toBeNull();
+  });
+
+  it('lets an unresolvable lookup through rather than denying sign-in', async () => {
+    // Fail-open. A provider fault must not lock every user out, and a missing
+    // key is a lookup that did not happen rather than a blocked address.
+    expect(await signinBlockRedirect('re_k', 'a@example.com', at(500))).toBeNull();
+    expect(await signinBlockRedirect(undefined, 'a@example.com', at(200))).toBeNull();
+  });
+
+  it('points at an error code the sign-in page actually renders', async () => {
+    // A redirect to a code with no copy silently falls through to the generic
+    // "Sign-in did not work" -- the message this whole path exists to replace.
+    const page = await import('node:fs/promises').then(fs =>
+      fs.readFile(new URL('../src/app/signin/page.tsx', import.meta.url), 'utf8'),
+    );
+    const code = new URL(`https://x${UNDELIVERABLE_REDIRECT}`).searchParams.get('error');
+    expect(code).toBeTruthy();
+    expect(page).toContain(`error === '${code}'`);
   });
 });

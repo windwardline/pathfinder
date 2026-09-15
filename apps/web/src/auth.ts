@@ -32,30 +32,27 @@ export const resendProvider = Resend({
     const correlationId = crypto.randomUUID()
     const startedAt = performance.now()
     try {
-      // A suppressed recipient is accepted by Resend and delivered to nobody,
-      // so this has to be asked BEFORE the send rather than read off its
-      // response. The sign-in form asks the same question to produce better
-      // copy; this one is the authoritative guard, because it sits on the only
-      // code path that can actually send, and any future caller of
-      // signIn('resend') inherits it without knowing it exists.
+      // Suppression is OBSERVED here and ENFORCED in the /signin server action,
+      // and the split is deliberate rather than tidy.
+      //
+      // @auth/core's send-token builds this promise, then awaits a hash before
+      // `Promise.all` attaches a handler to it (lib/actions/signin/send-token.js).
+      // Anything this function rejects with inside that window is an unhandled
+      // rejection — which Node terminates the process for by default. A
+      // suppression lookup answers in single-digit milliseconds, so throwing
+      // here lands in that window routinely rather than rarely: it failed in CI
+      // on the first run. Enforcing at the action, which runs before Auth.js is
+      // involved, needs no throw at all.
+      //
+      // So this emits and proceeds. Resend drops a suppressed send regardless,
+      // so proceeding costs nothing and delivers nothing; what it buys is the
+      // signal that an address reached the send path the action should have
+      // stopped, which is the only way that gap becomes visible.
       const suppression = await suppressionStatus(provider.apiKey, identifier)
-      if (suppression === 'suppressed') {
-        emitOperationalEvent({
-          correlationId,
-          service: "authentication",
-          operation: "magic_link_request",
-          outcome: "rejected",
-          durationMs: performance.now() - startedAt,
-        })
-        // Never the address: the telemetry contract excludes it on purpose.
-        throw new Error(
-          "Resend suppression: recipient is blocked from delivery. " +
-            "Sending would be accepted and silently dropped.",
-        )
-      }
-      if (suppression === 'unknown') {
-        // The check failed open so sign-in still works. It must not fail
-        // quietly as well, or the guard's own outage is the new invisible one.
+      if (suppression !== 'clear') {
+        // `rejected` for both: a blocked recipient and a lookup that could not
+        // run are each a send whose delivery is not established. Never the
+        // address itself — the telemetry contract excludes it on purpose.
         emitOperationalEvent({
           correlationId,
           service: "authentication",

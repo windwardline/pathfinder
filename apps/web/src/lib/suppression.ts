@@ -55,3 +55,29 @@ export async function suppressionStatus(
     return 'unknown'
   }
 }
+
+/**
+ * The sign-in gate, as a function a test can call.
+ *
+ * Enforcement cannot live in `sendVerificationRequest`: @auth/core builds that
+ * promise and then awaits a hash before attaching a handler, so rejecting
+ * inside that window is an unhandled rejection, which Node ends the process
+ * for. The /signin server action runs BEFORE Auth.js is involved and needs no
+ * throw — but an inline `if` inside a server action is reachable by no test,
+ * and the enforcement of the whole feature would then be the one line nothing
+ * covers. This is that line, extracted so it can be exercised.
+ *
+ * Returns the redirect target when the address must not be sent to, or null to
+ * proceed. Only a confirmed `suppressed` blocks: `unknown` proceeds, because a
+ * lookup that could not run must not deny anyone sign-in.
+ */
+export const UNDELIVERABLE_REDIRECT = '/signin?error=Undeliverable'
+
+export async function signinBlockRedirect(
+  apiKey: string | undefined,
+  email: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  const status = await suppressionStatus(apiKey, email, fetchImpl)
+  return status === 'suppressed' ? UNDELIVERABLE_REDIRECT : null
+}

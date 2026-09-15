@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { Compass } from 'lucide-react';
 import { TopoBackdrop } from '@/components/TopoBackdrop';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { suppressionStatus } from '@/lib/suppression';
+import { signinBlockRedirect } from '@/lib/suppression';
 import Link from 'next/link';
 
 export const metadata = { title: 'Sign in' };
@@ -82,14 +82,15 @@ export default async function SignInPage({
               if (!(await checkRateLimit(`signin:${email}`, 5, 15 * 60_000))) {
                 redirect('/signin?error=RateLimit');
               }
-              // Asked here as well as in the send, and on purpose. Auth.js
-              // collapses anything thrown from sendVerificationRequest into a
-              // generic EmailSignin error, which would put "Sign-in did not
-              // work, please try again" in front of someone whose address can
-              // never work no matter how many times they try. This is the only
-              // place that knows enough to say why.
-              if ((await suppressionStatus(process.env.RESEND_API_KEY, email)) === 'suppressed') {
-                redirect('/signin?error=Undeliverable');
+              // This is where suppression is ENFORCED, because it runs before
+              // Auth.js is involved. Two reasons it cannot be enforced in the
+              // send: @auth/core reports a rejection raised there as unhandled
+              // (Node ends the process for that), and it collapses whatever is
+              // thrown into a generic EmailSignin, which would tell someone
+              // whose address can never work to simply try again.
+              const blocked = await signinBlockRedirect(process.env.RESEND_API_KEY, email);
+              if (blocked) {
+                redirect(blocked);
               }
               await signIn('resend', {
                 email,

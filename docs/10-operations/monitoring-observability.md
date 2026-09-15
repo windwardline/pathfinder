@@ -152,9 +152,18 @@ the one sign-in failure that would otherwise look like a success. Resend
 accepts a send to a suppressed address, records it as `suppressed`, delivers
 nothing, and answers 2xx — so a handler reading the HTTP status reports the
 link sent while the reader waits for mail that cannot arrive. The address is
-checked against `GET /suppressions/:email` before the send
-(`apps/web/src/lib/suppression.ts`) and `/signin` names the cause rather than
-offering a retry that can never work.
+checked against `GET /suppressions/:email` (`apps/web/src/lib/suppression.ts`)
+and `/signin` names the cause rather than offering a retry that can never work.
+
+**Enforcement is at the sign-in action, not the send, and that is structural.**
+`@auth/core`'s `send-token` builds the `sendVerificationRequest` promise and
+then awaits a hash before `Promise.all` attaches a handler to it. A rejection
+raised inside that window is an unhandled rejection, which Node ends the
+process for by default — and a suppression lookup answers fast enough to land
+there routinely rather than rarely. The action runs before Auth.js is involved
+and needs no throw. `sendVerificationRequest` therefore only *observes*: if a
+suppressed address reaches it, the action-level gate was bypassed, and the
+`rejected` event is the only way that gap is visible.
 
 That lookup fails **open**: if it cannot complete, the send proceeds and a
 `rejected` event is emitted with `severity: warning`. Failing closed would turn
