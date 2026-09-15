@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { Compass } from 'lucide-react';
 import { TopoBackdrop } from '@/components/TopoBackdrop';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { signinBlockRedirect } from '@/lib/suppression';
 import Link from 'next/link';
 
 export const metadata = { title: 'Sign in' };
@@ -68,6 +69,8 @@ export default async function SignInPage({
                 ? 'That sign-in link has expired or was already used. Request a new one below.'
                 : error === 'RateLimit'
                   ? 'Too many sign-in links were requested. Please wait a few minutes and try again.'
+                : error === 'Undeliverable'
+                  ? 'We cannot deliver mail to that address — an earlier message to it bounced or was marked as spam, so it has been blocked. Check the spelling, or use a different address.'
                 : 'Sign-in did not work. Please try again.'}
             </p>
           )}
@@ -78,6 +81,16 @@ export default async function SignInPage({
               const email = String(formData.get('email') ?? '').trim().toLowerCase();
               if (!(await checkRateLimit(`signin:${email}`, 5, 15 * 60_000))) {
                 redirect('/signin?error=RateLimit');
+              }
+              // This is where suppression is ENFORCED, because it runs before
+              // Auth.js is involved. Two reasons it cannot be enforced in the
+              // send: @auth/core reports a rejection raised there as unhandled
+              // (Node ends the process for that), and it collapses whatever is
+              // thrown into a generic EmailSignin, which would tell someone
+              // whose address can never work to simply try again.
+              const blocked = await signinBlockRedirect(process.env.RESEND_API_KEY, email);
+              if (blocked) {
+                redirect(blocked);
               }
               await signIn('resend', {
                 email,

@@ -9,6 +9,12 @@ vi.mock('next-auth', () => ({
   default: () => ({ handlers: {}, signIn: () => {}, signOut: () => {}, auth: () => {} }),
 }));
 
+// The provider captures process.env.RESEND_API_KEY at construction, and
+// suppressionStatus returns `unknown` without a key — a lookup that never
+// happened is not evidence. Set it before the import or the suppression
+// branches below are unreachable and would pass vacuously.
+process.env.RESEND_API_KEY ??= 'test-resend-key';
+
 const { resendProvider } = await import('../src/auth');
 
 // What ships in the email is the invariant, and it is only observable after
@@ -31,6 +37,11 @@ async function requestSignIn(response: () => Response) {
   const sent: SentEmail[] = [];
 
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    // The send path now asks about suppression first. 404 is "not suppressed",
+    // which is the state every case here means to exercise.
+    if (String(input).startsWith('https://api.resend.com/suppressions/')) {
+      return new Response('{}', { status: 404 });
+    }
     expect(String(input)).toBe('https://api.resend.com/emails');
     sent.push(JSON.parse(String(init?.body)) as SentEmail);
     return response();
@@ -77,9 +88,74 @@ function telemetry(spy: { mock: { calls: unknown[][] } }) {
     .filter(event => event?.operation === 'magic_link_request');
 }
 
+async function requestSignInSuppressed(suppressionStatus: number) {
+  const sent: SentEmail[] = [];
+
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    if (String(input).startsWith('https://api.resend.com/suppressions/')) {
+      return new Response('{}', { status: suppressionStatus });
+    }
+    sent.push(JSON.parse(String(init?.body)) as SentEmail);
+    return accepted();
+  });
+
+  const result = await Auth(
+    new Request(`${ORIGIN}/api/auth/signin/resend`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ email: 'user@example.com', callbackUrl: `${ORIGIN}/` }),
+    }),
+    {
+      basePath: '/api/auth',
+      secret: 'test-secret-value-of-sufficient-length',
+      trustHost: true,
+      skipCSRFCheck,
+      adapter,
+      providers: [resendProvider],
+    },
+  );
+
+  return { result, sent };
+}
+
 describe('magic link delivery', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  // Enforcement lives in the /signin server action, which runs before Auth.js
+  // is involved. This path OBSERVES: @auth/core builds the send promise and
+  // then awaits a hash before Promise.all attaches a handler, so a rejection
+  // raised here lands in a window where Node reports it unhandled — and a
+  // suppression lookup is fast enough to land there routinely. It failed in CI
+  // on the first run. The contract under test is therefore: emit the signal,
+  // do not reject.
+  it('emits a rejected event when a suppressed address reaches the send path', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { result } = await requestSignInSuppressed(200);
+
+    const rejected = telemetry(warn).filter(event => event?.outcome === 'rejected');
+    expect(rejected.length).toBeGreaterThan(0);
+    // Not an error response: rejecting here is what crashes the process.
+    expect(result.status).toBe(302);
+    // The contract excludes recipient addresses; a suppression event must not
+    // be the one place one leaks.
+    for (const event of rejected) {
+      expect(JSON.stringify(event)).not.toContain('user@example.com');
+    }
+  });
+
+  it('emits the same signal when the suppression lookup itself fails', async () => {
+    // Fail-open: a Resend hiccup must not become a total sign-in outage. It
+    // must not be silent either, or the guard's own failure is the new
+    // invisible one.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { sent } = await requestSignInSuppressed(500);
+
+    expect(sent).toHaveLength(1);
+    expect(telemetry(warn).some(event => event?.outcome === 'rejected')).toBe(true);
   });
 
   it('emails the inert /verify landing page, never the token-consuming callback', async () => {

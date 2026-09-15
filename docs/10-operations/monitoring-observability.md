@@ -147,6 +147,33 @@ contract accepts operational categories and timings only; it has no fields for
 user identifiers, email addresses, Fact values, Route content, or documents.
 Inbound correlation headers are accepted only when they are opaque UUIDs.
 
+Magic-link delivery emits `rejected` for a suppressed recipient, and that is
+the one sign-in failure that would otherwise look like a success. Resend
+accepts a send to a suppressed address, records it as `suppressed`, delivers
+nothing, and answers 2xx — so a handler reading the HTTP status reports the
+link sent while the reader waits for mail that cannot arrive. The address is
+checked against `GET /suppressions/:email` (`apps/web/src/lib/suppression.ts`)
+and `/signin` names the cause rather than offering a retry that can never work.
+
+**Enforcement is at the sign-in action, not the send, and that is structural.**
+`@auth/core`'s `send-token` builds the `sendVerificationRequest` promise and
+then awaits a hash before `Promise.all` attaches a handler to it. A rejection
+raised inside that window is an unhandled rejection, which Node ends the
+process for by default — and a suppression lookup answers fast enough to land
+there routinely rather than rarely. The action runs before Auth.js is involved
+and needs no throw. `sendVerificationRequest` therefore only *observes*: if a
+suppressed address reaches it, the action-level gate was bypassed, and the
+`rejected` event is the only way that gap is visible.
+
+That lookup fails **open**: if it cannot complete, the send proceeds and a
+`rejected` event is emitted with `severity: warning`. Failing closed would turn
+a transient Resend fault into a total sign-in outage, which is worse than the
+defect being closed — the check makes an invisible failure visible, it is not
+an authorization gate. A run of those warnings means the guard is blind, not
+that recipients are blocked. Account-wide suppressions are swept weekly by
+`ops/resend-health.py`, which is the backstop for any address that never
+reaches this path.
+
 `.github/workflows/production-alert.yml` converts a failed Production health or
 Recovery drill run into a labeled GitHub issue, updating the existing open
 alert instead of creating notification noise. The issue contains only the
