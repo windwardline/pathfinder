@@ -1,0 +1,29 @@
+# OSV-Scanner policy for the `Dependency scan` gate in
+# .github/workflows/security.yml. OSV-Scanner reads this file from the
+# directory of the lockfile it scans, which is the repository root.
+#
+# An entry here suppresses a finding; it does not fix one. Every entry states
+# why the risk is accepted and carries an expiry, because an accepted risk that
+# cannot expire is an unreviewed one. When ignoreUntil passes, the gate fails
+# again and the decision has to be made a second time on that day's facts.
+
+# braces 3.0.3 -- deeply nested brace patterns exhaust the stack during
+# expansion. https://osv.dev/GHSA-vfj7-8cjw-p6xm (published 2026-09-18)
+#
+# There is nothing to upgrade to: the advisory lists no patched version, and
+# the scanner reports it as unfixable.
+#
+# The attacker must control the pattern. braces enters this tree once, as a
+# devDependency: web -> eslint-config-next -> @next/eslint-plugin-next ->
+# fast-glob -> micromatch -> braces. `pnpm why -r --prod braces` returns
+# nothing, so no production or runtime path loads it. The only patterns it
+# ever expands are the lint globs written in this repository's own config,
+# during `pnpm lint` locally and in CI. No request input reaches it.
+#
+# Reconsider before the expiry if any of these change: a patched braces ships,
+# braces appears under `pnpm why -r --prod`, or anything in apps/web begins
+# globbing a pattern taken from outside the repository.
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2026-11-09
+reason = "braces has no patched release. devDependency only (eslint-config-next -> @next/eslint-plugin-next -> fast-glob -> micromatch); `pnpm why -r --prod braces` is empty, so no runtime path loads it, and it expands only lint globs from this repository's own config. Expires 2026-11-09 for re-decision."

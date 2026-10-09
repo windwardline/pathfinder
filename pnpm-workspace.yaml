@@ -30,8 +30,13 @@ overrides:
   # the single patched release. Both prior instances were dev-tool chains.
   # 2026-08-03: 5.0.9 — the follow-up advisory (unbounded intermediate
   # arrays bypassing the CVE-2026-14257 mitigation) lands its complete fix.
-  'brace-expansion': 5.0.9
-  'next@16.2.11>sharp': 0.35.3
+  # 2026-10-08: GHSA-6j4f-fj2g-mc7p, -qhr7-859c-m2p7 and -q2hr-2g5m-vwhr
+  # widened the range past 5.0.9, so the exact pin became the vulnerability.
+  # A caret floor now: it lifts the tree to the fix without freezing it there.
+  # The patch below is a CJS-interop shim for minimatch@3, not an advisory
+  # backport, so it was ported to 5.0.12. pnpm fails install on an unused
+  # patch, so a resolution past 5.0.12 forces the shim to be re-ported.
+  'brace-expansion': ^5.0.12
   # 2026-08-03: any postcss below 8.5.23 reads attacker-controlled
   # sourceMappingURL .map files when `from` is unset (incomplete fix of
   # GHSA-6g55-p6wh-862q). Two in-range instances (8.5.18 via next,
@@ -58,7 +63,7 @@ overrides:
   # published 2026-08-26 and clears quarantine unaided.
   'js-yaml@<4.3.2': 4.3.2
 patchedDependencies:
-  brace-expansion@5.0.9: patches/brace-expansion@5.0.9.patch
+  brace-expansion@5.0.12: patches/brace-expansion@5.0.12.patch
 # trustPolicy: no-downgrade — retired 2026-08-10 (approved by Michael).
 #
 # It blocked every dependency update in this repo, security updates included,
