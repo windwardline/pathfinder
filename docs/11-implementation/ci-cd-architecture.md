@@ -107,9 +107,12 @@ Critical findings block merge and release.
 
 Release 1 uses the pinned Google OSV-Scanner reusable workflow to scan
 `pnpm-lock.yaml` on pull requests, pushes to `main`, scheduled security runs,
-and manual runs. The scanner fails on any known vulnerability. This lockfile
-gate replaces the retired npm audit endpoint while preserving transitive
-dependency coverage.
+and manual runs. The scanner fails on any known vulnerability not accepted in
+`osv-scanner.toml` at the repository root. An accepted entry is reserved for an
+advisory with no patched release, states why no untrusted input reaches the
+package, and carries an `ignoreUntil` expiry after which the gate fails again.
+This lockfile gate replaces the retired npm audit endpoint while preserving
+transitive dependency coverage.
 
 ## Test Stages
 
