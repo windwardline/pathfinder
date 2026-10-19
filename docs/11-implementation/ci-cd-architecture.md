@@ -111,6 +111,9 @@ and manual runs. The scanner fails on any known vulnerability not accepted in
 `osv-scanner.toml` at the repository root. An accepted entry is reserved for an
 advisory with no patched release, states why no untrusted input reaches the
 package, and carries an `ignoreUntil` expiry after which the gate fails again.
+A suppression does not dismiss the matching Dependabot alert. That alert is
+dismissed as `tolerable_risk` with the entry's rationale, and reopened if the
+entry lapses without being re-accepted.
 This lockfile gate replaces the retired npm audit endpoint while preserving
 transitive dependency coverage.
 
