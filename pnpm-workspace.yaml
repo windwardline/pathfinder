@@ -62,6 +62,13 @@ overrides:
   # osv-scan gate held every open Dependabot PR in this repo red. 4.3.2
   # published 2026-08-26 and clears quarantine unaided.
   'js-yaml@<4.3.2': 4.3.2
+  # GHSA-587h-7wmj-h5pm and four siblings: vite through 8.1.5, transitive via
+  # vitest. `pnpm update vite --depth Infinity` left 8.1.4 in place and
+  # Dependabot's security update failed four times from 2026-10-22, so the
+  # whole-tree osv-scan held every Dependabot PR here red. 8.1.6 published
+  # 2026-10-06 and clears quarantine unaided. Exact, not a caret: 8.2.0-8.2.3
+  # and 8.3.0-8.3.2 are inside the advisory range.
+  'vite@<8.1.6': 8.1.6
 patchedDependencies:
   brace-expansion@5.0.12: patches/brace-expansion@5.0.12.patch
 # trustPolicy: no-downgrade — retired 2026-08-10 (approved by Michael).
