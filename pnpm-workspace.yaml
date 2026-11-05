@@ -69,6 +69,13 @@ overrides:
   # 2026-10-06 and clears quarantine unaided. Exact, not a caret: 8.2.0-8.2.3
   # and 8.3.0-8.3.2 are inside the advisory range.
   'vite@<8.1.6': 8.1.6
+  # GHSA-g3hv-75wg-m249: minimatch 7.0.0 through 11.0.0 can be driven into
+  # exponential work by globparts amplification. Fixed only in 11.0.1, and
+  # typescript-eslint and eslint still require ^10, so Dependabot has nothing
+  # to offer. A caret floor, not a pin, so 11.x patches lift it unaided.
+  # 11.0.3 published 2026-10-28 and clears quarantine on its own. minimatch@3
+  # sits outside the advisory range and keeps its brace-expansion shim.
+  'minimatch@>=7 <11.0.1': ^11.0.1
 patchedDependencies:
   brace-expansion@5.0.12: patches/brace-expansion@5.0.12.patch
 # trustPolicy: no-downgrade — retired 2026-08-10 (approved by Michael).
