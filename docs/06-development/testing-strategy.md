@@ -122,6 +122,14 @@ Required flows:
 - Route Version → Adaptive Route View
 - Provenance propagation
 - User ownership enforcement
+- Timestamp round trip through drizzle and postgres-js
+
+Every schema column is `timestamp` without time zone, so the driver's reading of
+it decides when tokens and sessions expire. `timestamp-roundtrip.integration.test.ts`
+writes an instant inside a daylight-saving switch hour and requires it back to
+the millisecond, stored as UTC wall time. It runs in `America/Los_Angeles`
+because a local-time reading passes on any UTC host, which is every runner and
+Vercel. Added with postgres 4, which changed how Date parameters are typed.
 
 ### 3. Regression Tests
 
