@@ -23,7 +23,7 @@ jobs:
       PGPASSWORD: postgres
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -46,6 +46,20 @@ jobs:
         with:
           node-version: '24'
           cache: pnpm
+      # Every Postgres client call below runs inside the service container, so the
+      # client is always the server's own version. The runner image's client
+      # follows ubuntu-latest instead: on 2026-11-15 its newer pg_dump wrote
+      # `SET transaction_timeout`, which the older server rejected on restore.
+      - name: Bind Postgres client tools to the service container
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          test -n "$PG_CONTAINER"
+          echo "PG_CONTAINER=$PG_CONTAINER" >> "$GITHUB_ENV"
+          client=$(docker exec "$PG_CONTAINER" pg_dump --version | grep -oE '[0-9]+' | head -1)
+          server=$(docker exec "$PG_CONTAINER" psql -U postgres -tA -c 'show server_version_num')
+          echo "client major $client, server_version_num $server"
+          test "$client" = "$((server / 10000))"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Apply source migrations
@@ -53,28 +67,24 @@ jobs:
       - name: Populate and verify the source database
         run: pnpm --filter web test tests/api-lifecycle.integration.test.ts
       - name: Add a fictional account that predates a deletion request
-        run: psql "$POSTGRES_URL" --set=ON_ERROR_STOP=1 --command="insert into \"user\" (id, email, status, locale, \"timeZone\", \"createdAt\", \"updatedAt\") values ('recovery-deletion-user', 'recovery-delete@example.invalid', 'ACTIVE', 'en-US', 'UTC', now(), now())"
+        run: docker exec "$PG_CONTAINER" psql --username=postgres --dbname=pathfinder_source --set=ON_ERROR_STOP=1 --command="insert into \"user\" (id, email, status, locale, \"timeZone\", \"createdAt\", \"updatedAt\") values ('recovery-deletion-user', 'recovery-delete@example.invalid', 'ACTIVE', 'en-US', 'UTC', now(), now())"
       - name: Create the backup
-        run: pg_dump "$POSTGRES_URL" --format=custom --file="$RUNNER_TEMP/pathfinder.dump"
+        run: docker exec "$PG_CONTAINER" pg_dump --username=postgres --dbname=pathfinder_source --format=custom > "$RUNNER_TEMP/pathfinder.dump"
       - name: Record the later deletion in the current ledger
         run: |
           subject_hash=$(node -e "process.stdout.write(require('node:crypto').createHash('sha256').update('recovery-deletion-user').digest('hex'))")
-          psql "$POSTGRES_URL" --set=ON_ERROR_STOP=1 --command="delete from \"user\" where id = 'recovery-deletion-user'; insert into account_deletion_receipt (id, \"subjectHash\", \"correlationId\", \"deletedAt\") values (gen_random_uuid(), '$subject_hash', 'recovery-drill', now()) on conflict (\"subjectHash\") do nothing"
+          docker exec "$PG_CONTAINER" psql --username=postgres --dbname=pathfinder_source --set=ON_ERROR_STOP=1 --command="delete from \"user\" where id = 'recovery-deletion-user'; insert into account_deletion_receipt (id, \"subjectHash\", \"correlationId\", \"deletedAt\") values (gen_random_uuid(), '$subject_hash', 'recovery-drill', now()) on conflict (\"subjectHash\") do nothing"
       - name: Restore into a separate throwaway database
         run: |
-          createdb --host=localhost --username=postgres pathfinder_restore
-          pg_restore \
-            --dbname=postgres://postgres:postgres@localhost:5432/pathfinder_restore \
-            --no-owner \
-            --no-privileges \
-            "$RUNNER_TEMP/pathfinder.dump"
+          docker exec "$PG_CONTAINER" createdb --username=postgres pathfinder_restore
+          docker exec --interactive "$PG_CONTAINER" pg_restore --username=postgres --dbname=pathfinder_restore --no-owner --no-privileges < "$RUNNER_TEMP/pathfinder.dump"
       - name: Reapply deletion state from the current ledger
         run: pnpm --filter @pathfinder/core db:reapply-deletions
         env:
           DELETION_LEDGER_URL: postgres://postgres:postgres@localhost:5432/pathfinder_source
           RESTORE_DATABASE_URL: postgres://postgres:postgres@localhost:5432/pathfinder_restore
       - name: Verify the restored account was not resurrected
-        run: test "$(psql postgres://postgres:postgres@localhost:5432/pathfinder_restore --tuples-only --no-align --command="select count(*) from \"user\" where id = 'recovery-deletion-user'")" = "0"
+        run: test "$(docker exec "$PG_CONTAINER" psql --username=postgres --dbname=pathfinder_restore --tuples-only --no-align --command="select count(*) from \"user\" where id = 'recovery-deletion-user'")" = "0"
       - name: Verify ownership, routing, and lifecycle behavior after restore
         run: pnpm --filter web test tests/api-lifecycle.integration.test.ts
         env:
