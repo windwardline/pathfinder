@@ -130,6 +130,12 @@ fictional Release 1 data through the integration suite, creates a custom-format
 backup, restores it into a separate database, and reruns the ownership,
 Provenance, Route, Reroute, and lifecycle integration tests.
 
+Production runs PostgreSQL 17 on Neon, and every Postgres service container in
+CI and the drill runs the same major version. The drill invokes `psql`,
+`pg_dump`, `pg_restore`, and `createdb` inside that container, never from the
+runner image, whose client follows `ubuntu-latest` and once wrote a setting the
+server could not restore. `scripts/postgres-parity.test.mjs` enforces both.
+
 The workflow never connects to Production and does not retain the database dump
 as an artifact. It verifies the repository's recovery procedure without
 weakening the requirement for the production provider's encrypted daily backup,
