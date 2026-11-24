@@ -18,7 +18,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       POSTGRES_URL: postgres://postgres:postgres@localhost:5432/pathfinder_test
       AUTH_SECRET: ci-only-not-a-production-secret-32
@@ -76,8 +76,14 @@ jobs:
           echo "$n declared gate(s) executed."
         
 
+      # Normally 33-108s. On 2026-11-23 a ~100 KB/s apt mirror held it until the
+      # job timed out, so each attempt is capped and the next starts a fresh
+      # download; dpkg is repaired between attempts. scripts/retry-with-timeout-test.sh
       - name: Install browser acceptance runtime
-        run: pnpm --filter web exec playwright install --with-deps chromium webkit
+        run: >-
+          bash scripts/retry-with-timeout.sh 3 240
+          --between "sudo dpkg --configure -a"
+          -- pnpm --filter web exec playwright install --with-deps chromium webkit
 
       - name: Run browser acceptance tests
         run: pnpm --filter web test:e2e
