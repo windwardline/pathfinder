@@ -5,7 +5,6 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
-        { source: "/:p(.*\\\\.*)", destination: "/__nf-decoded-backslash" },
         { source: "/:p(.*%5[cC].*)", destination: "/__nf-encoded-backslash" },
       ],
       afterFiles: [],
